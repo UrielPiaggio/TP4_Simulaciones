@@ -87,48 +87,70 @@ function seleccionDeEventoMasTemprano(
   return siguienteEvento
 }
 
-export function simulacionCorreo(cantidadVueltasSimulacion: number) {
+export type Distribuciones = "exponencial" | "uniforme" | "normal" | "poisson"
+
+export type TiempoLlegada = {
+  distribucion: Distribuciones
+  media: number
+}
+
+export function simulacionCorreo(
+  cantidadVueltasSimulacion: number,
+  tiemposAtencion: {
+    tiempoAtencionEnvioPaquetes: number
+    tiempoAtencionRyD: number
+    tiempoVentaSyS: number
+    tiempoAtencionEmpresarial: number
+    tiempoAtencionPyES: number
+  },
+  tiemposLlegada: {
+    tiempoLlegadaEnvioPaquetes: TiempoLlegada
+    tiempoLlegadaRyD: TiempoLlegada
+    tiempoLlegadaSyS: TiempoLlegada
+    tiempoLlegadaEmpresarial: TiempoLlegada
+    tiempoLlegadaPyES: TiempoLlegada
+  },
+  empleados: {
+    empleadosEnvioPaquetes: number
+    empleadosRyD: number
+    empleadosSyS: number
+    empleadosEmpresarial: number
+    empleadosPyES: number
+  }
+) {
   // Variables útiles para la detección del evento más cercano
   let colaSiguienteClienteEnEspera: Evento[] = []
 
-  // Tiempos de atencion que podran ser pasados por parametro pero por pruebas estan fijos
+  const {
+    tiempoAtencionEnvioPaquetes,
+    tiempoAtencionRyD,
+    tiempoVentaSyS,
+    tiempoAtencionEmpresarial,
+    tiempoAtencionPyES,
+  } = tiemposAtencion
 
-  const tiempoAtencionEnvioPaquetes = 1 / 10
-  const tiempoAtencionRyD = 1 / 7
-  const tiempoVentaSyS = 1 / 18
-  const tiempoAtencionEmpresarial = 1 / 5
-  const tiempoAtencionPyES = 1 / 3
-
-  // Tiempos de llegada de clientes que podrian ser pasados por parametro pero por pruebas estan fijos
-  const tiempoLlegadaEnvioPaquetes = {
-    distribucion: "exponencial",
-    media: 1 / 25,
-  }
-  const tiempoLlegadaRyD = { distribucion: "exponencial", media: 1 / 15 }
-  const tiempoLlegadaSyS = { distribucion: "exponencial", media: 1 / 30 }
-  const tiempoLlegadaEmpresarial = {
-    distribucion: "exponencial",
-    media: 1 / 10,
-  }
-  const tiempoLlegadaPyES = { distribucion: "exponencial", media: 1 / 8 }
+  const {
+    tiempoLlegadaEnvioPaquetes,
+    tiempoLlegadaRyD,
+    tiempoLlegadaSyS,
+    tiempoLlegadaEmpresarial,
+    tiempoLlegadaPyES,
+  } = tiemposLlegada
 
   // Cantidad de empleados por area que podrian ser pasados por parametro pero por pruebas estan fijos
-  const empleadosEnvioPaquetes = 3
-  let empleadosEnvioPaquetesLibres = 3
+  const {
+    empleadosEnvioPaquetes,
+    empleadosRyD,
+    empleadosSyS,
+    empleadosEmpresarial,
+    empleadosPyES,
+  } = empleados
 
-  const empleadosRyD = 2
-  let empleadosRyDLibres = 2
-
-  const empleadosSyS = 3
-  let empleadosSySLibres = 3
-
-  const empleadosEmpresarial = 2
-  let empleadosEmpresarialLibres = 2
-
-  const empleadosPyES = 1
-  let empleadosPyESLibres = 1
-
-  // Acumuladores de tiempo
+  let empleadosEnvioPaquetesLibres = empleadosEnvioPaquetes
+  let empleadosRyDLibres = empleadosRyD
+  let empleadosSySLibres = empleadosSyS
+  let empleadosEmpresarialLibres = empleadosEmpresarial
+  let empleadosPyESLibres = empleadosPyES
 
   // Acumuladores de tiempo de espera de clientes
   let tiempoEsperaEnvioPaquetes = 0
@@ -137,8 +159,7 @@ export function simulacionCorreo(cantidadVueltasSimulacion: number) {
   let tiempoEsperaEmpresarial = 0
   let tiempoEsperaPyES = 0
 
-  //Acumuladores de servidores
-
+  // Acumuladores de servidores
   let tiempoOcupadosEnvioPaquetes = 0
   let tiempoOcupadosRyD = 0
   let tiempoOcupadosSyS = 0
@@ -462,4 +483,43 @@ export function simulacionCorreo(cantidadVueltasSimulacion: number) {
   }
   console.log(eventos)
 }
-simulacionCorreo(15)
+
+simulacionCorreo(
+  15,
+  {
+    tiempoAtencionEnvioPaquetes: 1 / 10,
+    tiempoAtencionRyD: 1 / 7,
+    tiempoVentaSyS: 1 / 18,
+    tiempoAtencionEmpresarial: 1 / 5,
+    tiempoAtencionPyES: 1 / 3,
+  },
+  {
+    tiempoLlegadaEnvioPaquetes: {
+      distribucion: "exponencial",
+      media: 1 / 25,
+    },
+    tiempoLlegadaRyD: {
+      distribucion: "exponencial",
+      media: 1 / 15,
+    },
+    tiempoLlegadaSyS: {
+      distribucion: "exponencial",
+      media: 1 / 30,
+    },
+    tiempoLlegadaEmpresarial: {
+      distribucion: "exponencial",
+      media: 1 / 10,
+    },
+    tiempoLlegadaPyES: {
+      distribucion: "exponencial",
+      media: 1 / 8,
+    },
+  },
+  {
+    empleadosEnvioPaquetes: 3,
+    empleadosRyD: 2,
+    empleadosSyS: 3,
+    empleadosEmpresarial: 2,
+    empleadosPyES: 1,
+  }
+)
