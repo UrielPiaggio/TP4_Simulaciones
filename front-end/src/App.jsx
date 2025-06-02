@@ -1,35 +1,49 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import "./App.css";
+import { VectorEstado } from "./components/vectorEstado";
+import { DefVariables } from "./components/defVariables";
+import { Container } from "react-bootstrap";
+import { Resultados } from "./components/Resultados";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [formData, setFormData] = useState(null);
 
+  const handleDataFromVariables = (data) => {
+    setFormData(data);
+    console.log("datos en App", data);
+  };
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <Container className="text-center">
+        <div
+          style={{
+            position: "relative",
+            textAlign: "center",
+            width: "90%",
+            left: "5%",
+            top: "0%",
+          }}
+        >
+          <h1>Empresa de Correos</h1>
+          <DefVariables onSendData={handleDataFromVariables}></DefVariables>
+        </div>
+        <div
+          style={{
+            position: "relative",
+
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <VectorEstado></VectorEstado>
+        </div>
+
+        <div style={{ position: "relative", width: "90%", left: "5%" }}>
+          <Resultados></Resultados>
+        </div>
+      </Container>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
