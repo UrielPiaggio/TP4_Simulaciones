@@ -12,34 +12,32 @@ function App() {
     setFormData(data);
     console.log("datos en App", data);
   };
+
   return (
     <>
-      <Container className="text-center">
-        <div
-          style={{
-            position: "relative",
-            textAlign: "center",
-            width: "90%",
-            left: "5%",
-            top: "0%",
-          }}
-        >
-          <h1>Empresa de Correos</h1>
-          <DefVariables onSendData={handleDataFromVariables}></DefVariables>
-        </div>
-        <div
-          style={{
-            position: "relative",
-
-            width: "100%",
-            textAlign: "center",
-          }}
-        >
-          <VectorEstado></VectorEstado>
+      <Container fluid className="px-3">
+        {/* Header principal con diseño mejorado */}
+        <div className="main-header fade-in-up">
+          <h1>🏢 Empresa de Correos</h1>
+          <p className="subtitle">Sistema de Simulación de Colas y Servicios</p>
         </div>
 
-        <div style={{ position: "relative", width: "90%", left: "5%" }}>
-          <Resultados></Resultados>
+        {/* Sección de definición de variables */}
+        <div className="section-card form-section fade-in-up">
+          <h2 className="section-title">📋 Configuración de Servicios</h2>
+          <DefVariables onSendData={handleDataFromVariables} />
+        </div>
+
+        {/* Sección del vector de estado */}
+        <div className="section-card vector-table-container fade-in-up">
+          <h2 className="section-title">📊 Vector de Estado</h2>
+          <VectorEstado />
+        </div>
+
+        {/* Sección de resultados */}
+        <div className="section-card results-section fade-in-up">
+          <h2 className="section-title">📈 Resultados de la Simulación</h2>
+          <Resultados />
         </div>
       </Container>
     </>
