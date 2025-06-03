@@ -5,6 +5,7 @@ type Evento = {
   nombre: string
   horario: number
   horarioInicio?: number
+  prioridad?: boolean
 }
 
 type Resultados = {
@@ -12,7 +13,8 @@ type Resultados = {
     envioPaquetes: number
     ryD: number
     syS: number
-    empresarial: number
+    empresarialAltaPrioridad: number
+    empresarialBajaPrioridad: number
     pyES: number
     nuevoServicio: number
   }
@@ -24,6 +26,16 @@ type Resultados = {
     pyES: number
     nuevoServicio: number
   }
+  cantidadMaximaEnCola: {
+    envioPaquetes: number
+    ryD: number
+    syS: number
+    empresarialAltaPrioridad: number
+    empresarialBajaPrioridad: number
+    pyES: number
+    nuevoServicio: number
+  }
+  probabilidadClientesPaquetesAtendidosEnMasDe15: number
 }
 
 const random = new Random()
@@ -87,7 +99,13 @@ export function simulacionCorreo(
     empleadosEmpresarial: number
     empleadosPyES: number
   },
-  ausenciaEmpleadoEmpresarial: boolean
+  ausenciaEmpleadoEmpresarial: boolean,
+  nuevoServicio: {
+    tiempoAtencion: number
+    numeroEmpleados: number
+    habilitado: boolean
+  },
+  prioridadEnEmpresarial: boolean
 ) {
   const {
     tiempoAtencionEnvioPaquetes,
@@ -119,20 +137,27 @@ export function simulacionCorreo(
   let empleadosSySLibres = empleadosSyS
   let empleadosEmpresarialLibres = empleadosEmpresarial
   let empleadosPyESLibres = empleadosPyES
+  let empleadosNuevoServicioLibres = nuevoServicio.habilitado
+    ? nuevoServicio.numeroEmpleados
+    : 0
 
   // Contadores de clientes atendidos
   let clientesAtendidosEnvioPaquetes = 0
   let clientesAtendidosRyD = 0
   let clientesAtendidosSyS = 0
-  let clientesAtendidosEmpresarial = 0
+  let clientesAtendidosEmpresarialAltaPrioridad = 0
+  let clientesAtendidosEmpresarialBajaPrioridad = 0
   let clientesAtendidosPyES = 0
+  let clientesAtendidosNuevoServicio = 0
 
   // Acumuladores de tiempo de espera
   let tiempoEsperaEnvioPaquetes = 0
   let tiempoEsperaRyD = 0
   let tiempoEsperaSyS = 0
-  let tiempoEsperaEmpresarial = 0
+  let tiempoEsperaEmpresarialAltaPrioridad = 0
+  let tiempoEsperaEmpresarialBajaPrioridad = 0
   let tiempoEsperaPyES = 0
+  let tiempoEsperaNuevoServicio = 0
 
   // Acumuladores de tiempo de ocupación
   let tiempoOcupadosEnvioPaquetes = 0
@@ -140,6 +165,16 @@ export function simulacionCorreo(
   let tiempoOcupadosSyS = 0
   let tiempoOcupadosEmpresarial = 0
   let tiempoOcupadosPyES = 0
+  let tiempoOcupadoNuevoServicio = 0
+
+  // Maxima Cantidad de clientes en cola
+  let maxColaEnvioPaquetes = 0
+  let maxColaRyD = 0
+  let maxColaSyS = 0
+  let maxColaEmpresarialAltaPrioridad = 0
+  let maxColaEmpresarialBajaPrioridad = 0
+  let maxColaPyES = 0
+  let maxColaNuevoServicio = 0
 
   // Lista de eventos futuros
   const eventos: Evento[] = []
@@ -148,10 +183,14 @@ export function simulacionCorreo(
   const colaEnvioPaquetes: Evento[] = []
   const colaRyD: Evento[] = []
   const colaSyS: Evento[] = []
-  const colaEmpresarial: Evento[] = []
+  const colaEmpresarialAltaPrioridad: Evento[] = []
+  const colaEmpresarialBajaPrioridad: Evento[] = []
   const colaPyES: Evento[] = []
+  const colaNuevoServicio: Evento[] = []
 
   let tiempoSimulacion = 0
+
+  let clientesPaquetesAtentidosEnMasDe15 = 0
 
   // Programar primeras llegadas
   eventos.push({
@@ -169,6 +208,7 @@ export function simulacionCorreo(
   eventos.push({
     nombre: "Llegada Cliente Empresarial",
     horario: exponencial(tiempoLlegadaEmpresarial.media, random.float()),
+    prioridad: prioridadEnEmpresarial ? random.float() < 0.2 : false,
   })
   eventos.push({
     nombre: "Llegada Cliente PyES",
@@ -229,6 +269,7 @@ export function simulacionCorreo(
           eventos.push({
             nombre: "Llegada Cliente Empresarial",
             horario: tiempoSimulacion + proximaLlegada,
+            prioridad: prioridadEnEmpresarial ? random.float() < 0.2 : false,
           })
           break
         case "PyES":
@@ -246,6 +287,9 @@ export function simulacionCorreo(
           if (empleadosEnvioPaquetesLibres > 0) {
             empleadosEnvioPaquetesLibres--
             clientesAtendidosEnvioPaquetes++
+            if (tiempoSimulacion - siguienteEvento.horario > 0.25) {
+              clientesPaquetesAtentidosEnMasDe15++
+            }
             eventos.push({
               nombre: "Fin Atencion EnvioPaquetes",
               horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
@@ -256,6 +300,9 @@ export function simulacionCorreo(
               ...siguienteEvento,
               horario: tiempoSimulacion,
             })
+            if (colaEnvioPaquetes.length > maxColaEnvioPaquetes) {
+              maxColaEnvioPaquetes = colaEnvioPaquetes.length
+            }
           }
           break
         case "RyD":
@@ -272,6 +319,9 @@ export function simulacionCorreo(
               ...siguienteEvento,
               horario: tiempoSimulacion,
             })
+            if (colaRyD.length > maxColaRyD) {
+              maxColaRyD = colaRyD.length
+            }
           }
           break
         case "SyS":
@@ -288,22 +338,46 @@ export function simulacionCorreo(
               ...siguienteEvento,
               horario: tiempoSimulacion,
             })
+            if (colaSyS.length > maxColaSyS) {
+              maxColaSyS = colaSyS.length
+            }
           }
           break
         case "Empresarial":
           if (empleadosEmpresarialLibres > 0) {
             empleadosEmpresarialLibres--
-            clientesAtendidosEmpresarial++
+            clientesAtendidosEmpresarialBajaPrioridad++
             eventos.push({
               nombre: "Fin Atencion Empresarial",
               horario: tiempoSimulacion + tiempoAtencionEmpresarial,
               horarioInicio: tiempoSimulacion,
             })
           } else {
-            colaEmpresarial.push({
-              ...siguienteEvento,
-              horario: tiempoSimulacion,
-            })
+            if (siguienteEvento.prioridad!) {
+              colaEmpresarialAltaPrioridad.push({
+                ...siguienteEvento,
+                horario: tiempoSimulacion,
+              })
+              if (
+                colaEmpresarialAltaPrioridad.length >
+                maxColaEmpresarialAltaPrioridad
+              ) {
+                maxColaEmpresarialAltaPrioridad =
+                  colaEmpresarialAltaPrioridad.length
+              }
+            } else {
+              colaEmpresarialBajaPrioridad.push({
+                ...siguienteEvento,
+                horario: tiempoSimulacion,
+              })
+              if (
+                colaEmpresarialBajaPrioridad.length >
+                maxColaEmpresarialBajaPrioridad
+              ) {
+                maxColaEmpresarialBajaPrioridad =
+                  colaEmpresarialBajaPrioridad.length
+              }
+            }
           }
           break
         case "PyES":
@@ -320,8 +394,28 @@ export function simulacionCorreo(
               ...siguienteEvento,
               horario: tiempoSimulacion,
             })
+            if (colaPyES.length > maxColaPyES) {
+              maxColaPyES = colaPyES.length
+            }
           }
           break
+        case "Nuevo":
+          if (empleadosNuevoServicioLibres > 0) {
+            empleadosNuevoServicioLibres--
+            eventos.push({
+              nombre: "Fin Atencion Nuevo",
+              horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaNuevoServicio.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
+            if (colaNuevoServicio.length > maxColaNuevoServicio) {
+              maxColaNuevoServicio = colaNuevoServicio.length
+            }
+          }
       }
     } else if (accion === "Fin") {
       // Procesar fin de atención
@@ -339,10 +433,22 @@ export function simulacionCorreo(
             clientesAtendidosEnvioPaquetes++
             tiempoEsperaEnvioPaquetes +=
               tiempoSimulacion - clienteEnCola.horario
+
+            if (tiempoSimulacion - clienteEnCola.horario > 0.25) {
+              clientesPaquetesAtentidosEnMasDe15++
+            }
+
             eventos.push({
               nombre: "Fin Atencion EnvioPaquetes",
               horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
               horarioInicio: tiempoSimulacion,
+            })
+          }
+          if (random.float() > 0.49 && nuevoServicio.habilitado) {
+            // Simular un nuevo servicio
+            eventos.push({
+              nombre: "Llegada Servicio Nuevo",
+              horario: tiempoSimulacion,
             })
           }
           break
@@ -382,16 +488,30 @@ export function simulacionCorreo(
           empleadosEmpresarialLibres++
           tiempoOcupadosEmpresarial += tiempoAtencionRealizado
 
-          if (colaEmpresarial.length > 0) {
-            const clienteEnCola = colaEmpresarial.shift()!
+          if (colaEmpresarialAltaPrioridad.length > 0) {
+            const clienteEnCola = colaEmpresarialAltaPrioridad.shift()!
             empleadosEmpresarialLibres--
-            clientesAtendidosEmpresarial++
-            tiempoEsperaEmpresarial += tiempoSimulacion - clienteEnCola.horario
+            clientesAtendidosEmpresarialAltaPrioridad++
+            tiempoEsperaEmpresarialAltaPrioridad +=
+              tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion Empresarial",
               horario: tiempoSimulacion + tiempoAtencionEmpresarial,
               horarioInicio: tiempoSimulacion,
             })
+          } else {
+            if (colaEmpresarialBajaPrioridad.length > 0) {
+              const clienteEnCola = colaEmpresarialBajaPrioridad.shift()!
+              empleadosEmpresarialLibres--
+              clientesAtendidosEmpresarialBajaPrioridad++
+              tiempoEsperaEmpresarialBajaPrioridad +=
+                tiempoSimulacion - clienteEnCola.horario
+              eventos.push({
+                nombre: "Fin Atencion Empresarial",
+                horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+                horarioInicio: tiempoSimulacion,
+              })
+            }
           }
           break
         case "PyES":
@@ -406,6 +526,30 @@ export function simulacionCorreo(
             eventos.push({
               nombre: "Fin Atencion PyES",
               horario: tiempoSimulacion + tiempoAtencionPyES,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          if (random.float() > 0.49 && nuevoServicio.habilitado) {
+            // Simular un nuevo servicio
+            eventos.push({
+              nombre: "Llegada Servicio Nuevo",
+              horario: tiempoSimulacion,
+            })
+          }
+          break
+        case "Nuevo":
+          empleadosNuevoServicioLibres++
+          tiempoOcupadoNuevoServicio += tiempoAtencionRealizado
+          if (colaNuevoServicio.length > 0) {
+            const clienteEnCola = colaNuevoServicio.shift()!
+            empleadosNuevoServicioLibres--
+            clientesAtendidosNuevoServicio++
+            tiempoEsperaNuevoServicio +=
+              tiempoSimulacion - clienteEnCola.horario
+            // No se cuenta como cliente atendido, ya que es un nuevo servicio
+            eventos.push({
+              nombre: "Fin Atencion Nuevo",
+              horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -425,11 +569,12 @@ export function simulacionCorreo(
       })
     } else if (accion === "Retorno") {
       empleadosEmpresarialLibres++
-      if (colaEmpresarial.length > 0) {
-        const clienteEnCola = colaEmpresarial.shift()!
+      if (colaEmpresarialBajaPrioridad.length > 0) {
+        const clienteEnCola = colaEmpresarialBajaPrioridad.shift()!
         empleadosEmpresarialLibres--
-        clientesAtendidosEmpresarial++
-        tiempoEsperaEmpresarial += tiempoSimulacion - clienteEnCola.horario
+        clientesAtendidosEmpresarialBajaPrioridad++
+        tiempoEsperaEmpresarialBajaPrioridad +=
+          tiempoSimulacion - clienteEnCola.horario
         eventos.push({
           nombre: "Fin Atencion Empresarial",
           horario: tiempoSimulacion + tiempoAtencionEmpresarial,
@@ -458,44 +603,89 @@ export function simulacionCorreo(
         clientesAtendidosSyS > 0
           ? parseFloat((tiempoEsperaSyS / clientesAtendidosSyS).toFixed(4))
           : 0,
-      empresarial:
-        clientesAtendidosEmpresarial > 0
+      empresarialAltaPrioridad:
+        clientesAtendidosEmpresarialAltaPrioridad > 0
           ? parseFloat(
-              (tiempoEsperaEmpresarial / clientesAtendidosEmpresarial).toFixed(
-                4
-              )
+              (
+                tiempoEsperaEmpresarialAltaPrioridad /
+                clientesAtendidosEmpresarialAltaPrioridad
+              ).toFixed(4)
+            )
+          : 0,
+      empresarialBajaPrioridad:
+        clientesAtendidosEmpresarialBajaPrioridad > 0
+          ? parseFloat(
+              (
+                tiempoEsperaEmpresarialBajaPrioridad /
+                clientesAtendidosEmpresarialBajaPrioridad
+              ).toFixed(4)
             )
           : 0,
       pyES:
         clientesAtendidosPyES > 0
           ? parseFloat((tiempoEsperaPyES / clientesAtendidosPyES).toFixed(4))
           : 0,
-      nuevoServicio: 0,
+      nuevoServicio: nuevoServicio.habilitado
+        ? parseFloat(
+            (
+              tiempoEsperaNuevoServicio / clientesAtendidosNuevoServicio
+            ).toFixed(4)
+          )
+        : 0,
     },
     promediosOcupacion: {
       envioPaquetes: parseFloat(
         (
-          tiempoOcupadosEnvioPaquetes /
-          (tiempoSimulacion * empleadosEnvioPaquetes)
+          (tiempoOcupadosEnvioPaquetes /
+            (tiempoSimulacion * empleadosEnvioPaquetes)) *
+          100
         ).toFixed(4)
       ),
       ryD: parseFloat(
-        (tiempoOcupadosRyD / (tiempoSimulacion * empleadosRyD)).toFixed(4)
+        ((tiempoOcupadosRyD / (tiempoSimulacion * empleadosRyD)) * 100).toFixed(
+          4
+        )
       ),
       syS: parseFloat(
-        (tiempoOcupadosSyS / (tiempoSimulacion * empleadosSyS)).toFixed(4)
+        ((tiempoOcupadosSyS / (tiempoSimulacion * empleadosSyS)) * 100).toFixed(
+          4
+        )
       ),
       empresarial: parseFloat(
         (
-          tiempoOcupadosEmpresarial /
-          (tiempoSimulacion * empleadosEmpresarial)
+          (tiempoOcupadosEmpresarial /
+            (tiempoSimulacion * empleadosEmpresarial)) *
+          100
         ).toFixed(4)
       ),
       pyES: parseFloat(
-        (tiempoOcupadosPyES / (tiempoSimulacion * empleadosPyES)).toFixed(4)
+        (
+          (tiempoOcupadosPyES / (tiempoSimulacion * empleadosPyES)) *
+          100
+        ).toFixed(4)
       ),
-      nuevoServicio: 0,
+      nuevoServicio: nuevoServicio.habilitado
+        ? parseFloat(
+            (
+              (tiempoOcupadoNuevoServicio /
+                (tiempoSimulacion * nuevoServicio.numeroEmpleados)) *
+              100
+            ).toFixed(4)
+          )
+        : 0,
     },
+    cantidadMaximaEnCola: {
+      envioPaquetes: maxColaEnvioPaquetes,
+      ryD: maxColaRyD,
+      syS: maxColaSyS,
+      empresarialAltaPrioridad: maxColaEmpresarialAltaPrioridad,
+      empresarialBajaPrioridad: maxColaEmpresarialBajaPrioridad,
+      pyES: maxColaPyES,
+      nuevoServicio: maxColaNuevoServicio,
+    },
+    probabilidadClientesPaquetesAtendidosEnMasDe15:
+      parseFloat(((clientesPaquetesAtentidosEnMasDe15 /
+      (clientesAtendidosEnvioPaquetes || 1))*100).toFixed(4)),
   }
 
   return resultados
@@ -540,8 +730,15 @@ const resultados = simulacionCorreo(
     empleadosEmpresarial: 2,
     empleadosPyES: 1,
   },
+  true,
+  { tiempoAtencion: 1 / 5, numeroEmpleados: 3, habilitado: true },
   true
 )
 
 console.log("Promedios de espera:", resultados.promediosEspera)
 console.log("Promedios de ocupación:", resultados.promediosOcupacion)
+console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
+console.log(
+  "Probabilidad de clientes atendidos en más de 15 minutos:",
+  resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
+)
