@@ -4,87 +4,57 @@ import { exponencial, uniforme, normal, poisson } from "./distribuciones"
 type Evento = {
   nombre: string
   horario: number
+  horarioInicio?: number
+}
+
+type Resultados = {
+  promediosEspera: {
+    envioPaquetes: number
+    ryD: number
+    syS: number
+    empresarial: number
+    pyES: number
+    nuevoServicio: number
+  }
+  promediosOcupacion: {
+    envioPaquetes: number
+    ryD: number
+    syS: number
+    empresarial: number
+    pyES: number
+    nuevoServicio: number
+  }
 }
 
 const random = new Random()
 
-function encontrarClienteMasAntiguo(
-  colas,
-  empleadosLibres
-): { evento: Evento; cola: Evento[] } {
-  // Evento de referencia inicial
-  let clienteMasAntiguo = {
-    nombre: "MADE IN HEAVEN",
-    horario: Infinity,
+function procesarColaServicio(
+  cola: Evento[],
+  empleadosLibres: number,
+  tiempoAtencion: number,
+  tiempoSimulacion: number,
+  eventos: Evento[],
+  nombreServicio: string
+): number {
+  let empleadosOcupados = 0
+
+  while (cola.length > 0 && empleadosLibres > 0) {
+    const cliente = cola.shift()!
+    empleadosLibres--
+    empleadosOcupados++
+
+    const horarioFinAtencion = parseFloat(
+      (tiempoSimulacion + tiempoAtencion).toFixed(4)
+    )
+
+    eventos.push({
+      nombre: `Fin Atencion ${nombreServicio}`,
+      horario: horarioFinAtencion,
+      horarioInicio: tiempoSimulacion,
+    })
   }
-  let colaClienteMasAntigo = null
 
-  // Definir las colas y sus empleados correspondientes
-  const configuracionColas = [
-    {
-      cola: colas.colaEnvioPaquetes,
-      empleadosLibres: empleadosLibres.empleadosEnvioPaquetesLibres,
-    },
-    {
-      cola: colas.colaRyD,
-      empleadosLibres: empleadosLibres.empleadosRyDLibres,
-    },
-    {
-      cola: colas.colaSyS,
-      empleadosLibres: empleadosLibres.empleadosSySLibres,
-    },
-    {
-      cola: colas.colaEmpresarial,
-      empleadosLibres: empleadosLibres.empleadosEmpresarialLibres,
-    },
-    {
-      cola: colas.colaPyES,
-      empleadosLibres: empleadosLibres.empleadosPyESLibres,
-    },
-  ]
-
-  // Iterar sobre cada configuración de cola
-  configuracionColas.forEach(({ cola, empleadosLibres }) => {
-    if (cola.length > 0 && empleadosLibres > 0) {
-      const clienteMasAñejo = cola.find(
-        (evento) => evento.horario < clienteMasAntiguo.horario
-      )
-      if (clienteMasAñejo) {
-        clienteMasAntiguo = clienteMasAñejo
-        colaClienteMasAntigo = cola
-      }
-    }
-  })
-
-  return {
-    evento: clienteMasAntiguo,
-    cola: colaClienteMasAntigo ? colaClienteMasAntigo : [],
-  }
-}
-
-function seleccionDeEventoMasTemprano(
-  evento1: Evento,
-  cola1: Evento[],
-  evento2: Evento,
-  cola2: Evento[],
-  tiempoSimulacion?: number
-): Evento {
-  let siguienteEvento: Evento = evento1
-
-  if (evento1.horario <= evento2.horario) {
-    siguienteEvento = evento1
-    const indice = cola1.indexOf(evento1)
-    if (indice !== -1) {
-      cola1.splice(indice, 1)
-    }
-  } else {
-    siguienteEvento = evento2
-    const indice = cola2.indexOf(evento2)
-    if (indice !== -1) {
-      cola2.splice(indice, 1)
-    }
-  }
-  return siguienteEvento
+  return empleadosOcupados
 }
 
 export type Distribuciones = "exponencial" | "uniforme" | "normal" | "poisson"
@@ -95,7 +65,7 @@ export type TiempoLlegada = {
 }
 
 export function simulacionCorreo(
-  cantidadVueltasSimulacion: number,
+  tiempoMaximoSimulacion: number,
   tiemposAtencion: {
     tiempoAtencionEnvioPaquetes: number
     tiempoAtencionRyD: number
@@ -116,11 +86,9 @@ export function simulacionCorreo(
     empleadosSyS: number
     empleadosEmpresarial: number
     empleadosPyES: number
-  }
+  },
+  ausenciaEmpleadoEmpresarial: boolean
 ) {
-  // Variables útiles para la detección del evento más cercano
-  let colaSiguienteClienteEnEspera: Evento[] = []
-
   const {
     tiempoAtencionEnvioPaquetes,
     tiempoAtencionRyD,
@@ -137,7 +105,6 @@ export function simulacionCorreo(
     tiempoLlegadaPyES,
   } = tiemposLlegada
 
-  // Cantidad de empleados por area que podrian ser pasados por parametro pero por pruebas estan fijos
   const {
     empleadosEnvioPaquetes,
     empleadosRyD,
@@ -146,346 +113,397 @@ export function simulacionCorreo(
     empleadosPyES,
   } = empleados
 
+  // Estados de empleados
   let empleadosEnvioPaquetesLibres = empleadosEnvioPaquetes
   let empleadosRyDLibres = empleadosRyD
   let empleadosSySLibres = empleadosSyS
   let empleadosEmpresarialLibres = empleadosEmpresarial
   let empleadosPyESLibres = empleadosPyES
 
-  // Acumuladores de tiempo de espera de clientes
+  // Contadores de clientes atendidos
+  let clientesAtendidosEnvioPaquetes = 0
+  let clientesAtendidosRyD = 0
+  let clientesAtendidosSyS = 0
+  let clientesAtendidosEmpresarial = 0
+  let clientesAtendidosPyES = 0
+
+  // Acumuladores de tiempo de espera
   let tiempoEsperaEnvioPaquetes = 0
   let tiempoEsperaRyD = 0
   let tiempoEsperaSyS = 0
   let tiempoEsperaEmpresarial = 0
   let tiempoEsperaPyES = 0
 
-  // Acumuladores de servidores
+  // Acumuladores de tiempo de ocupación
   let tiempoOcupadosEnvioPaquetes = 0
   let tiempoOcupadosRyD = 0
   let tiempoOcupadosSyS = 0
   let tiempoOcupadosEmpresarial = 0
   let tiempoOcupadosPyES = 0
 
-  // Horarios de clientes por llegar a cada area
-  let horarioLlegadaClientesEnvioPaquetes: number = 0
-  let horarioLlegadaClientesRyD: number = 0
-  let horarioLlegadaClientesSyS: number = 0
-  let horarioLlegadaClientesEmpresarial: number = 0
-  let horarioLlegadaClientesPyES: number = 0
-
-  // Horarios de fin de atencion de clientes de cada servicio
-  let horarioFinAtencionEnvioPaquetes: number = 0
-  let horarioFinAtencionRyD: number = 0
-  let horarioFinAtencionSyS: number = 0
-  let horarioFinAtencionEmpresarial: number = 0
-  let horarioFinAtencionPyES: number = 0
-
-  // Array de proximos eventos
+  // Lista de eventos futuros
   const eventos: Evento[] = []
 
-  // Tiempo
-  let tiempoSimulacion = 0
-
-  // Colas
+  // Colas de espera
   const colaEnvioPaquetes: Evento[] = []
   const colaRyD: Evento[] = []
   const colaSyS: Evento[] = []
   const colaEmpresarial: Evento[] = []
   const colaPyES: Evento[] = []
 
-  for (let i = 0; i < cantidadVueltasSimulacion; i++) {
-    console.log("Iteración: ", i)
-    if (i === 0) {
-      // Inicializamos los horarios de llegada de clientes
-      horarioLlegadaClientesEnvioPaquetes = exponencial(
-        tiempoLlegadaEnvioPaquetes.media,
-        random.float()
-      )
-      eventos.push({
-        nombre: "Llegada Cliente EnvioPaquetes",
-        horario: parseFloat(horarioLlegadaClientesEnvioPaquetes.toFixed(4)),
-      })
+  let tiempoSimulacion = 0
 
-      horarioLlegadaClientesRyD = exponencial(
-        tiempoLlegadaRyD.media,
-        random.float()
-      )
-      eventos.push({
-        nombre: "Llegada Cliente RyD",
-        horario: parseFloat(horarioLlegadaClientesRyD.toFixed(4)),
-      })
-      horarioLlegadaClientesSyS = exponencial(
-        tiempoLlegadaSyS.media,
-        random.float()
-      )
-      eventos.push({
-        nombre: "Llegada Cliente SyS",
-        horario: parseFloat(horarioLlegadaClientesSyS.toFixed(4)),
-      })
-      horarioLlegadaClientesEmpresarial = exponencial(
-        tiempoLlegadaEmpresarial.media,
-        random.float()
-      )
-      eventos.push({
-        nombre: "Llegada Cliente Empresarial",
-        horario: parseFloat(horarioLlegadaClientesEmpresarial.toFixed(4)),
-      })
-      horarioLlegadaClientesPyES = exponencial(
-        tiempoLlegadaPyES.media,
-        random.float()
-      )
-      eventos.push({
-        nombre: "Llegada Cliente PyES",
-        horario: parseFloat(horarioLlegadaClientesPyES.toFixed(4)),
-      })
-    } else {
-      if (
-        !eventos.find(
-          (evento) => evento.nombre === "Llegada Cliente EnvioPaquetes"
-        )
-      ) {
-        horarioLlegadaClientesEnvioPaquetes = exponencial(
-          tiempoLlegadaEnvioPaquetes.media,
-          random.float()
-        )
-        eventos.push({
-          nombre: "Llegada Cliente EnvioPaquetes",
-          horario: parseFloat(
-            (tiempoSimulacion + horarioLlegadaClientesEnvioPaquetes).toFixed(4)
-          ),
-        })
+  // Programar primeras llegadas
+  eventos.push({
+    nombre: "Llegada Cliente EnvioPaquetes",
+    horario: exponencial(tiempoLlegadaEnvioPaquetes.media, random.float()),
+  })
+  eventos.push({
+    nombre: "Llegada Cliente RyD",
+    horario: exponencial(tiempoLlegadaRyD.media, random.float()),
+  })
+  eventos.push({
+    nombre: "Llegada Cliente SyS",
+    horario: exponencial(tiempoLlegadaSyS.media, random.float()),
+  })
+  eventos.push({
+    nombre: "Llegada Cliente Empresarial",
+    horario: exponencial(tiempoLlegadaEmpresarial.media, random.float()),
+  })
+  eventos.push({
+    nombre: "Llegada Cliente PyES",
+    horario: exponencial(tiempoLlegadaPyES.media, random.float()),
+  })
+
+  if (ausenciaEmpleadoEmpresarial) {
+    eventos.push({
+      nombre: "Ausencia Empleado Empresarial",
+      horario: 1,
+    })
+  }
+
+  while (tiempoSimulacion < tiempoMaximoSimulacion && eventos.length > 0) {
+    // Encontrar el próximo evento
+    eventos.sort((a, b) => a.horario - b.horario)
+    const siguienteEvento = eventos.shift()!
+
+    tiempoSimulacion = siguienteEvento.horario
+
+    if (tiempoSimulacion > tiempoMaximoSimulacion) break
+
+    const [accion, , servicio] = siguienteEvento.nombre.split(" ")
+
+    if (accion === "Llegada") {
+      // Programar próxima llegada del mismo tipo
+      let proximaLlegada: number
+      switch (servicio) {
+        case "EnvioPaquetes":
+          proximaLlegada = exponencial(
+            tiempoLlegadaEnvioPaquetes.media,
+            random.float()
+          )
+          eventos.push({
+            nombre: "Llegada Cliente EnvioPaquetes",
+            horario: tiempoSimulacion + proximaLlegada,
+          })
+          break
+        case "RyD":
+          proximaLlegada = exponencial(tiempoLlegadaRyD.media, random.float())
+          eventos.push({
+            nombre: "Llegada Cliente RyD",
+            horario: tiempoSimulacion + proximaLlegada,
+          })
+          break
+        case "SyS":
+          proximaLlegada = exponencial(tiempoLlegadaSyS.media, random.float())
+          eventos.push({
+            nombre: "Llegada Cliente SyS",
+            horario: tiempoSimulacion + proximaLlegada,
+          })
+          break
+        case "Empresarial":
+          proximaLlegada = exponencial(
+            tiempoLlegadaEmpresarial.media,
+            random.float()
+          )
+          eventos.push({
+            nombre: "Llegada Cliente Empresarial",
+            horario: tiempoSimulacion + proximaLlegada,
+          })
+          break
+        case "PyES":
+          proximaLlegada = exponencial(tiempoLlegadaPyES.media, random.float())
+          eventos.push({
+            nombre: "Llegada Cliente PyES",
+            horario: tiempoSimulacion + proximaLlegada,
+          })
+          break
       }
 
-      if (!eventos.find((evento) => evento.nombre === "Llegada Cliente RyD")) {
-        horarioLlegadaClientesRyD = exponencial(
-          tiempoLlegadaRyD.media,
-          random.float()
-        )
-        eventos.push({
-          nombre: "Llegada Cliente RyD",
-          horario: parseFloat(
-            (tiempoSimulacion + horarioLlegadaClientesRyD).toFixed(4)
-          ),
-        })
-      }
-      if (!eventos.find((evento) => evento.nombre === "Llegada Cliente SyS")) {
-        horarioLlegadaClientesSyS = exponencial(
-          tiempoLlegadaSyS.media,
-          random.float()
-        )
-        eventos.push({
-          nombre: "Llegada Cliente SyS",
-          horario: parseFloat(
-            (tiempoSimulacion + horarioLlegadaClientesSyS).toFixed(4)
-          ),
-        })
-      }
-      if (
-        !eventos.find(
-          (evento) => evento.nombre === "Llegada Cliente Empresarial"
-        )
-      ) {
-        horarioLlegadaClientesEmpresarial = exponencial(
-          tiempoLlegadaEmpresarial.media,
-          random.float()
-        )
-        eventos.push({
-          nombre: "Llegada Cliente Empresarial",
-          horario: parseFloat(
-            (tiempoSimulacion + horarioLlegadaClientesEmpresarial).toFixed(4)
-          ),
-        })
-      }
-      if (!eventos.find((evento) => evento.nombre === "Llegada Cliente PyES")) {
-        horarioLlegadaClientesPyES = exponencial(
-          tiempoLlegadaPyES.media,
-          random.float()
-        )
-        eventos.push({
-          nombre: "Llegada Cliente PyES",
-          horario: parseFloat(
-            (tiempoSimulacion + horarioLlegadaClientesPyES).toFixed(4)
-          ),
-        })
-      }
-      const resultadoClienteMasAntiguo = encontrarClienteMasAntiguo(
-        { colaEnvioPaquetes, colaRyD, colaSyS, colaEmpresarial, colaPyES },
-        {
-          empleadosEnvioPaquetesLibres,
-          empleadosRyDLibres,
-          empleadosSySLibres,
-          empleadosEmpresarialLibres,
-          empleadosPyESLibres,
-        }
-      )
-
-      let posibleSiguienteEventoCola: Evento = resultadoClienteMasAntiguo.evento
-
-      colaSiguienteClienteEnEspera = resultadoClienteMasAntiguo.cola
-
-      // Buscamos el evento más cercano en la lista de eventos
-      let posibleSiguienteEvento = eventos.find(
-        (evento) =>
-          evento.horario === Math.min(...eventos.map((e) => e.horario))
-      )
-
-      if (!posibleSiguienteEvento) {
-        console.log("No hay más eventos por procesar.")
-        break
-      }
-
-      // Comprobamos si cual de los 2 eventos más cercanos es el que se ejecuta, si el de las colas atendibles o el de la lista de eventos
-      let siguienteEvento: Evento | null = seleccionDeEventoMasTemprano(
-        posibleSiguienteEvento,
-        eventos,
-        posibleSiguienteEventoCola,
-        colaSiguienteClienteEnEspera
-      )
-
-      if (siguienteEvento.horario > tiempoSimulacion) {
-        tiempoSimulacion = parseFloat(siguienteEvento.horario.toFixed(4))
-      }
-
-      console.log("Tiempo de simulación: ", tiempoSimulacion)
-      console.log("Siguiente evento a ocurrir: ", siguienteEvento)
-
-      const eventoNombre = siguienteEvento.nombre.split(" ")
-
-      switch (eventoNombre[0]) {
-        case "Llegada":
-          switch (eventoNombre[2]) {
-            case "EnvioPaquetes":
-              if (empleadosEnvioPaquetesLibres > 0) {
-                empleadosEnvioPaquetesLibres--
-                horarioFinAtencionEnvioPaquetes = parseFloat(
-                  (tiempoSimulacion + tiempoAtencionEnvioPaquetes).toFixed(4)
-                )
-                tiempoOcupadosEnvioPaquetes += tiempoAtencionEnvioPaquetes
-                tiempoEsperaEnvioPaquetes +=
-                  tiempoSimulacion - siguienteEvento.horario
-                console.log(
-                  "Espera de este cliente",
-                  (tiempoSimulacion - siguienteEvento.horario).toFixed(4)
-                )
-                eventos.push({
-                  nombre: "Fin Atencion EnvioPaquetes",
-                  horario: horarioFinAtencionEnvioPaquetes,
-                })
-              } else {
-                colaEnvioPaquetes.push(siguienteEvento)
-              }
-              break
-            case "RyD":
-              if (empleadosRyDLibres > 0) {
-                empleadosRyDLibres--
-                horarioFinAtencionRyD = parseFloat(
-                  (tiempoSimulacion + tiempoAtencionRyD).toFixed(4)
-                )
-                tiempoOcupadosRyD += tiempoAtencionRyD
-                tiempoEsperaRyD += tiempoSimulacion - siguienteEvento.horario
-                console.log(
-                  "Espera de este cliente",
-                  tiempoSimulacion - siguienteEvento.horario
-                )
-
-                eventos.push({
-                  nombre: "Fin Atencion RyD",
-                  horario: horarioFinAtencionRyD,
-                })
-              } else {
-                colaRyD.push(siguienteEvento)
-              }
-              break
-            case "SyS":
-              if (empleadosSySLibres > 0) {
-                empleadosSySLibres--
-                horarioFinAtencionSyS = parseFloat(
-                  (tiempoSimulacion + tiempoVentaSyS).toFixed(4)
-                )
-                tiempoOcupadosSyS += tiempoVentaSyS
-                tiempoEsperaSyS += tiempoSimulacion - siguienteEvento.horario
-                console.log(
-                  "Espera de este cliente",
-                  tiempoSimulacion - siguienteEvento.horario
-                )
-
-                eventos.push({
-                  nombre: "Fin Atencion SyS",
-                  horario: horarioFinAtencionSyS,
-                })
-              } else {
-                colaSyS.push(siguienteEvento)
-              }
-              break
-            case "Empresarial":
-              if (empleadosEmpresarialLibres > 0) {
-                empleadosEmpresarialLibres--
-                horarioFinAtencionEmpresarial = parseFloat(
-                  (tiempoSimulacion + tiempoAtencionEmpresarial).toFixed(4)
-                )
-                tiempoOcupadosEmpresarial += tiempoAtencionEmpresarial
-                tiempoEsperaEmpresarial +=
-                  tiempoSimulacion - siguienteEvento.horario
-                console.log(
-                  "Espera de este cliente",
-                  tiempoSimulacion - siguienteEvento.horario
-                )
-                eventos.push({
-                  nombre: "Fin Atencion Empresarial",
-                  horario: horarioFinAtencionEmpresarial,
-                })
-              } else {
-                colaEmpresarial.push(siguienteEvento)
-              }
-              break
-            case "PyES":
-              if (empleadosPyESLibres > 0) {
-                empleadosPyESLibres--
-                horarioFinAtencionPyES = parseFloat(
-                  (tiempoSimulacion + tiempoAtencionPyES).toFixed(4)
-                )
-                tiempoOcupadosPyES += tiempoAtencionPyES
-                tiempoEsperaPyES += tiempoSimulacion - siguienteEvento.horario
-                console.log(
-                  "Espera de este cliente",
-                  tiempoSimulacion - siguienteEvento.horario
-                )
-                eventos.push({
-                  nombre: "Fin Atencion PyES",
-                  horario: horarioFinAtencionPyES,
-                })
-              } else {
-                colaPyES.push(siguienteEvento)
-              }
-              break
+      // Procesar llegada del cliente
+      switch (servicio) {
+        case "EnvioPaquetes":
+          if (empleadosEnvioPaquetesLibres > 0) {
+            empleadosEnvioPaquetesLibres--
+            clientesAtendidosEnvioPaquetes++
+            eventos.push({
+              nombre: "Fin Atencion EnvioPaquetes",
+              horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaEnvioPaquetes.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
           }
           break
-        case "Fin":
-          switch (eventoNombre[2]) {
-            case "EnvioPaquetes":
-              empleadosEnvioPaquetesLibres++
-              break
-            case "RyD":
-              empleadosRyDLibres++
-              break
-            case "SyS":
-              empleadosSySLibres++
-              break
-            case "Empresarial":
-              empleadosEmpresarialLibres++
-              break
-            case "PyES":
-              empleadosPyESLibres++
-              break
+        case "RyD":
+          if (empleadosRyDLibres > 0) {
+            empleadosRyDLibres--
+            clientesAtendidosRyD++
+            eventos.push({
+              nombre: "Fin Atencion RyD",
+              horario: tiempoSimulacion + tiempoAtencionRyD,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaRyD.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
           }
+          break
+        case "SyS":
+          if (empleadosSySLibres > 0) {
+            empleadosSySLibres--
+            clientesAtendidosSyS++
+            eventos.push({
+              nombre: "Fin Atencion SyS",
+              horario: tiempoSimulacion + tiempoVentaSyS,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaSyS.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
+          }
+          break
+        case "Empresarial":
+          if (empleadosEmpresarialLibres > 0) {
+            empleadosEmpresarialLibres--
+            clientesAtendidosEmpresarial++
+            eventos.push({
+              nombre: "Fin Atencion Empresarial",
+              horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaEmpresarial.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
+          }
+          break
+        case "PyES":
+          if (empleadosPyESLibres > 0) {
+            empleadosPyESLibres--
+            clientesAtendidosPyES++
+            eventos.push({
+              nombre: "Fin Atencion PyES",
+              horario: tiempoSimulacion + tiempoAtencionPyES,
+              horarioInicio: tiempoSimulacion,
+            })
+          } else {
+            colaPyES.push({
+              ...siguienteEvento,
+              horario: tiempoSimulacion,
+            })
+          }
+          break
+      }
+    } else if (accion === "Fin") {
+      // Procesar fin de atención
+      const tiempoAtencionRealizado =
+        tiempoSimulacion - siguienteEvento.horarioInicio!
+
+      switch (servicio) {
+        case "EnvioPaquetes":
+          empleadosEnvioPaquetesLibres++
+          tiempoOcupadosEnvioPaquetes += tiempoAtencionRealizado
+
+          if (colaEnvioPaquetes.length > 0) {
+            const clienteEnCola = colaEnvioPaquetes.shift()!
+            empleadosEnvioPaquetesLibres--
+            clientesAtendidosEnvioPaquetes++
+            tiempoEsperaEnvioPaquetes +=
+              tiempoSimulacion - clienteEnCola.horario
+            eventos.push({
+              nombre: "Fin Atencion EnvioPaquetes",
+              horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          break
+        case "RyD":
+          empleadosRyDLibres++
+          tiempoOcupadosRyD += tiempoAtencionRealizado
+
+          if (colaRyD.length > 0) {
+            const clienteEnCola = colaRyD.shift()!
+            empleadosRyDLibres--
+            clientesAtendidosRyD++
+            tiempoEsperaRyD += tiempoSimulacion - clienteEnCola.horario
+            eventos.push({
+              nombre: "Fin Atencion RyD",
+              horario: tiempoSimulacion + tiempoAtencionRyD,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          break
+        case "SyS":
+          empleadosSySLibres++
+          tiempoOcupadosSyS += tiempoAtencionRealizado
+
+          if (colaSyS.length > 0) {
+            const clienteEnCola = colaSyS.shift()!
+            empleadosSySLibres--
+            clientesAtendidosSyS++
+            tiempoEsperaSyS += tiempoSimulacion - clienteEnCola.horario
+            eventos.push({
+              nombre: "Fin Atencion SyS",
+              horario: tiempoSimulacion + tiempoVentaSyS,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          break
+        case "Empresarial":
+          empleadosEmpresarialLibres++
+          tiempoOcupadosEmpresarial += tiempoAtencionRealizado
+
+          if (colaEmpresarial.length > 0) {
+            const clienteEnCola = colaEmpresarial.shift()!
+            empleadosEmpresarialLibres--
+            clientesAtendidosEmpresarial++
+            tiempoEsperaEmpresarial += tiempoSimulacion - clienteEnCola.horario
+            eventos.push({
+              nombre: "Fin Atencion Empresarial",
+              horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          break
+        case "PyES":
+          empleadosPyESLibres++
+          tiempoOcupadosPyES += tiempoAtencionRealizado
+
+          if (colaPyES.length > 0) {
+            const clienteEnCola = colaPyES.shift()!
+            empleadosPyESLibres--
+            clientesAtendidosPyES++
+            tiempoEsperaPyES += tiempoSimulacion - clienteEnCola.horario
+            eventos.push({
+              nombre: "Fin Atencion PyES",
+              horario: tiempoSimulacion + tiempoAtencionPyES,
+              horarioInicio: tiempoSimulacion,
+            })
+          }
+          break
+      }
+    } else if (accion === "Ausencia") {
+      if (empleadosEmpresarialLibres > 0) {
+        empleadosEmpresarialLibres--
+        eventos.push({
+          nombre: "Retorno Empleado Empresarial",
+          horario: tiempoSimulacion + 0.2, // Simular retorno después de 1 unidad de tiempo
+        })
+      }
+      eventos.push({
+        nombre: "Ausencia Empleado Empresarial",
+        horario: tiempoSimulacion + 1,
+      })
+    } else if (accion === "Retorno") {
+      empleadosEmpresarialLibres++
+      if (colaEmpresarial.length > 0) {
+        const clienteEnCola = colaEmpresarial.shift()!
+        empleadosEmpresarialLibres--
+        clientesAtendidosEmpresarial++
+        tiempoEsperaEmpresarial += tiempoSimulacion - clienteEnCola.horario
+        eventos.push({
+          nombre: "Fin Atencion Empresarial",
+          horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+          horarioInicio: tiempoSimulacion,
+        })
       }
     }
   }
-  console.log(eventos)
+
+  // Calcular resultados
+  const resultados: Resultados = {
+    promediosEspera: {
+      envioPaquetes:
+        clientesAtendidosEnvioPaquetes > 0
+          ? parseFloat(
+              (
+                tiempoEsperaEnvioPaquetes / clientesAtendidosEnvioPaquetes
+              ).toFixed(4)
+            )
+          : 0,
+      ryD:
+        clientesAtendidosRyD > 0
+          ? parseFloat((tiempoEsperaRyD / clientesAtendidosRyD).toFixed(4))
+          : 0,
+      syS:
+        clientesAtendidosSyS > 0
+          ? parseFloat((tiempoEsperaSyS / clientesAtendidosSyS).toFixed(4))
+          : 0,
+      empresarial:
+        clientesAtendidosEmpresarial > 0
+          ? parseFloat(
+              (tiempoEsperaEmpresarial / clientesAtendidosEmpresarial).toFixed(
+                4
+              )
+            )
+          : 0,
+      pyES:
+        clientesAtendidosPyES > 0
+          ? parseFloat((tiempoEsperaPyES / clientesAtendidosPyES).toFixed(4))
+          : 0,
+      nuevoServicio: 0,
+    },
+    promediosOcupacion: {
+      envioPaquetes: parseFloat(
+        (
+          tiempoOcupadosEnvioPaquetes /
+          (tiempoSimulacion * empleadosEnvioPaquetes)
+        ).toFixed(4)
+      ),
+      ryD: parseFloat(
+        (tiempoOcupadosRyD / (tiempoSimulacion * empleadosRyD)).toFixed(4)
+      ),
+      syS: parseFloat(
+        (tiempoOcupadosSyS / (tiempoSimulacion * empleadosSyS)).toFixed(4)
+      ),
+      empresarial: parseFloat(
+        (
+          tiempoOcupadosEmpresarial /
+          (tiempoSimulacion * empleadosEmpresarial)
+        ).toFixed(4)
+      ),
+      pyES: parseFloat(
+        (tiempoOcupadosPyES / (tiempoSimulacion * empleadosPyES)).toFixed(4)
+      ),
+      nuevoServicio: 0,
+    },
+  }
+
+  return resultados
 }
 
-simulacionCorreo(
-  15,
+// Ejemplo de uso
+const resultados = simulacionCorreo(
+  10000, // Tiempo máximo de simulación en lugar de número de iteraciones
   {
     tiempoAtencionEnvioPaquetes: 1 / 10,
     tiempoAtencionRyD: 1 / 7,
@@ -521,5 +539,9 @@ simulacionCorreo(
     empleadosSyS: 3,
     empleadosEmpresarial: 2,
     empleadosPyES: 1,
-  }
+  },
+  true
 )
+
+console.log("Promedios de espera:", resultados.promediosEspera)
+console.log("Promedios de ocupación:", resultados.promediosOcupacion)

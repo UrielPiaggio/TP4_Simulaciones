@@ -4,7 +4,8 @@
   "main": "src/app.ts",
   "scripts": {
     "dev": "bun run --watch src/app.ts",
-    "start": "bun run src/app.ts"
+    "start": "bun run src/app.ts",
+    "test": "bun run src/index.ts"
   },
   "author": "",
   "license": "ISC",
