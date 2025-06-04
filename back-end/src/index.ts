@@ -1159,8 +1159,10 @@ export function simulacionCorreo(
     // Al final del bucle while, ANTES del cierre del while:
     // Capturar vector de estado si está en el rango
     if (
-      iteracionActual >= iteracionAMostrarPrimero &&
-      iteracionActual <= iteracionFinal
+      (iteracionActual >= iteracionAMostrarPrimero &&
+        iteracionActual <= iteracionFinal) ||
+      iteracionActual <= 5 ||
+      iteracionActual === numeroIteraciones
     ) {
       const vectorEstado = crearVectorEstado(
         iteracionActual,
@@ -1207,7 +1209,6 @@ export function simulacionCorreo(
       vectorEstados.push(vectorEstado)
     }
   } // Cierre del while
-
   actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
 
   // Calcular resultados (sin cambios en la lógica de cálculo)
@@ -1329,7 +1330,7 @@ export function simulacionCorreo(
 const simulacion = simulacionCorreo(
   100000, // Número de iteraciones
   100, // Iteración a mostrar primero
-  5, // Cantidad de iteraciones a mostrar
+  2, // Cantidad de iteraciones a mostrar
   {
     tiempoAtencionEnvioPaquetes: 1 / 10,
     tiempoAtencionRyD: 1 / 7,
@@ -1374,16 +1375,18 @@ const simulacion = simulacionCorreo(
 const resultados = simulacion.resultados
 const vectorEstados = simulacion.vectorEstados
 
-// console.log("Promedios de espera:", resultados.promediosEspera)
-// console.log("Promedios de ocupación:", resultados.promediosOcupacion)
-// console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
-// console.log(
-//   "Probabilidad de clientes atendidos en más de 15 minutos:",
-//   resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
-// )
-// console.log(
-//   "Promedio de gente en cola Envio Paquetes:",
-//   resultados.promedioGenteEnColaEnvioPaquetes
-// )
+console.log("Promedios de espera:", resultados.promediosEspera)
+console.log("Promedios de ocupación:", resultados.promediosOcupacion)
+console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
+console.log(
+  "Probabilidad de clientes atendidos en más de 15 minutos:",
+  resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
+)
+console.log(
+  "Promedio de gente en cola Envio Paquetes:",
+  resultados.promedioGenteEnColaEnvioPaquetes
+)
 
-// console.log("Vector de estados:", vectorEstados)
+vectorEstados.forEach((estado, index) => {
+  console.log(estado.numeroIteracion)
+})
