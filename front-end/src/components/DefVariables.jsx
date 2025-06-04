@@ -94,65 +94,73 @@ export const DefVariables = ({ onSendData }) => {
       prefix: "TS5",
       color: "#f59e0b",
     },
+    {
+      title: "📮 Servicio Post Despacho Paquetes",
+      icon: "📮",
+      prefix: "TS6",
+      color: "#f59e0b",
+    },
   ]
 
   return (
     <>
       <Form onSubmit={handleSubmit}>
         <div className="service-columns-container">
-          {serviceConfigs.map((service, index) => (
-            <div key={index} className="service-column">
-              <div className="service-label">
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.8rem" }}>
-                  {service.icon}
+          <Row>
+            {serviceConfigs.map((service, index) => (
+              <Col key={index} md={4} className="mb-4">
+                <div className="service-label">
+                  <div style={{ fontSize: "2.5rem", marginBottom: "0.8rem" }}>
+                    {service.icon}
+                  </div>
+                  <div style={{ fontSize: "0.95rem", lineHeight: "1.3" }}>
+                    {service.title}
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.95rem", lineHeight: "1.3" }}>
-                  {service.title}
+
+                <div className="service-inputs-container">
+                  <FloatingLabel
+                    controlId={`llegada-${service.prefix}`}
+                    label="👥 Clientes por hora"
+                  >
+                    <Form.Control
+                      type="number"
+                      name={`LlegadaCT${service.prefix}`}
+                      defaultValue={formDatos[`LlegadaCT${service.prefix}`]}
+                      onChange={handleChange}
+                      min="1"
+                    />
+                  </FloatingLabel>
+
+                  <FloatingLabel
+                    controlId={`servidores-${service.prefix}`}
+                    label="🏪 Cantidad Servidores"
+                  >
+                    <Form.Control
+                      name={`CantiSer${service.prefix}`}
+                      type="number"
+                      defaultValue={formDatos[`CantiSer${service.prefix}`]}
+                      onChange={handleChange}
+                      min="1"
+                    />
+                  </FloatingLabel>
+
+                  <FloatingLabel
+                    controlId={`tasa-${service.prefix}`}
+                    label="⚡ Tasa de Servicio"
+                  >
+                    <Form.Control
+                      name={`TasaLlegada${service.prefix}`}
+                      type="number"
+                      defaultValue={formDatos[`TasaLlegada${service.prefix}`]}
+                      onChange={handleChange}
+                      min="1"
+                    />
+                  </FloatingLabel>
                 </div>
-              </div>
-
-              <div className="service-inputs-container">
-                <FloatingLabel
-                  controlId={`llegada-${service.prefix}`}
-                  label="👥 Clientes por hora"
-                >
-                  <Form.Control
-                    type="number"
-                    name={`LlegadaCT${service.prefix}`}
-                    defaultValue={formDatos[`LlegadaCT${service.prefix}`]}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </FloatingLabel>
-
-                <FloatingLabel
-                  controlId={`servidores-${service.prefix}`}
-                  label="🏪 Cantidad Servidores"
-                >
-                  <Form.Control
-                    name={`CantiSer${service.prefix}`}
-                    type="number"
-                    defaultValue={formDatos[`CantiSer${service.prefix}`]}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </FloatingLabel>
-
-                <FloatingLabel
-                  controlId={`tasa-${service.prefix}`}
-                  label="⚡ Tasa de Servicio"
-                >
-                  <Form.Control
-                    name={`TasaLlegada${service.prefix}`}
-                    type="number"
-                    defaultValue={formDatos[`TasaLlegada${service.prefix}`]}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </FloatingLabel>
-              </div>
-            </div>
-          ))}{" "}
+              </Col>
+            ))}
+          </Row>
         </div>
 
         {/* Configuración de tabla */}

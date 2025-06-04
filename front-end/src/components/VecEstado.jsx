@@ -37,6 +37,13 @@ export default function VecEstado() {
       tiempoEsperaPromedio: 0,
       porcentajeOcupacion: 0,
     },
+    {
+      nombre: "Servicio Post Despacho Paquetes",
+      servidores: 1,
+      cola: 1,
+      tiempoEsperaPromedio: 0,
+      porcentajeOcupacion: 0,
+    },
   ]
 
   return (
@@ -80,23 +87,33 @@ export default function VecEstado() {
           <tr>
             {tipoServicio.map((servicio, index) => (
               <React.Fragment key={index}>
-                <th colSpan={3} className="border px-2 py-1 bg-yellow-100">
+                <th
+                  colSpan={3}
+                  className="border px-2 py-1"
+                  style={{ backgroundColor: "#FFD700" }}
+                >
                   Llegada Cliente
                 </th>
                 <th
                   colSpan={2 + servicio.servidores}
-                  className="border px-2 py-1 bg-green-100"
+                  className="border px-2 py-1"
+                  style={{ backgroundColor: "#98FF98" }}
                 >
                   Fin de Atención
                 </th>
-                <th className="border px-2 py-1 bg-blue-100">Cola</th>
+                <th className="border px-2 py-1">Cola</th>
                 <th
                   colSpan={servicio.servidores}
-                  className="border px-2 py-1 bg-purple-100"
+                  className="border px-2 py-1"
+                  style={{ backgroundColor: "#ADD8E6" }}
                 >
                   Estado Servidores
                 </th>
-                <th colSpan={2} className="border px-2 py-1 bg-pink-100">
+                <th
+                  colSpan={2}
+                  className="border px-2 py-1"
+                  style={{ backgroundColor: "#FFDAB9" }}
+                >
                   Métricas
                 </th>
               </React.Fragment>
