@@ -36,6 +36,7 @@ type Resultados = {
     nuevoServicio: number
   }
   probabilidadClientesPaquetesAtendidosEnMasDe15: number
+  promedioGenteEnColaEnvioPaquetes?: number
 }
 
 const random = new Random()
@@ -77,20 +78,22 @@ export type TiempoLlegada = {
 }
 
 export function simulacionCorreo(
-  tiempoMaximoSimulacion: number,
+  numeroIteraciones: number, // Cambio: ahora recibe número de iteraciones
+  iteracionAMostrarPrimero: number,
+  cantidadDeFilasAMostrar: number,
   tiemposAtencion: {
-    tiempoAtencionEnvioPaquetes: number
-    tiempoAtencionRyD: number
-    tiempoVentaSyS: number
-    tiempoAtencionEmpresarial: number
-    tiempoAtencionPyES: number
+    tiempoAtencionEnvioPaquetes: number // en horas
+    tiempoAtencionRyD: number // en horas
+    tiempoVentaSyS: number // en horas
+    tiempoAtencionEmpresarial: number // en horas
+    tiempoAtencionPyES: number // en horas
   },
   tiemposLlegada: {
-    tiempoLlegadaEnvioPaquetes: TiempoLlegada
-    tiempoLlegadaRyD: TiempoLlegada
-    tiempoLlegadaSyS: TiempoLlegada
-    tiempoLlegadaEmpresarial: TiempoLlegada
-    tiempoLlegadaPyES: TiempoLlegada
+    tiempoLlegadaEnvioPaquetes: TiempoLlegada // media en horas
+    tiempoLlegadaRyD: TiempoLlegada // media en horas
+    tiempoLlegadaSyS: TiempoLlegada // media en horas
+    tiempoLlegadaEmpresarial: TiempoLlegada // media en horas
+    tiempoLlegadaPyES: TiempoLlegada // media en horas
   },
   empleados: {
     empleadosEnvioPaquetes: number
@@ -101,7 +104,7 @@ export function simulacionCorreo(
   },
   ausenciaEmpleadoEmpresarial: boolean,
   nuevoServicio: {
-    tiempoAtencion: number
+    tiempoAtencion: number // en horas
     numeroEmpleados: number
     habilitado: boolean
   },
@@ -189,8 +192,18 @@ export function simulacionCorreo(
   const colaNuevoServicio: Evento[] = []
 
   let tiempoSimulacion = 0
+  let iteracionActual = 0 // Contador de iteraciones
 
   let clientesPaquetesAtentidosEnMasDe15 = 0
+
+  let tiempoUltimaActualizacionColaEnvio = 0
+  let areaColaEnvioPaquetes = 0
+
+  function actualizarAreaColaEnvioPaquetes(tiempoActual: number) {
+    const tiempoTranscurrido = tiempoActual - tiempoUltimaActualizacionColaEnvio
+    areaColaEnvioPaquetes += colaEnvioPaquetes.length * tiempoTranscurrido
+    tiempoUltimaActualizacionColaEnvio = tiempoActual
+  }
 
   // Programar primeras llegadas
   eventos.push({
@@ -218,18 +231,18 @@ export function simulacionCorreo(
   if (ausenciaEmpleadoEmpresarial) {
     eventos.push({
       nombre: "Ausencia Empleado Empresarial",
-      horario: 1,
+      horario: 1, // Primera ausencia a la hora 1
     })
   }
 
-  while (tiempoSimulacion < tiempoMaximoSimulacion && eventos.length > 0) {
+  // Cambio principal: usar número de iteraciones en lugar de tiempo máximo
+  while (iteracionActual < numeroIteraciones && eventos.length > 0) {
     // Encontrar el próximo evento
     eventos.sort((a, b) => a.horario - b.horario)
     const siguienteEvento = eventos.shift()!
 
     tiempoSimulacion = siguienteEvento.horario
-
-    if (tiempoSimulacion > tiempoMaximoSimulacion) break
+    iteracionActual++ // Incrementar contador de iteraciones
 
     const [accion, , servicio] = siguienteEvento.nombre.split(" ")
 
@@ -284,9 +297,11 @@ export function simulacionCorreo(
       // Procesar llegada del cliente
       switch (servicio) {
         case "EnvioPaquetes":
+          actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
           if (empleadosEnvioPaquetesLibres > 0) {
             empleadosEnvioPaquetesLibres--
             clientesAtendidosEnvioPaquetes++
+            // Cambio: 0.25 horas = 15 minutos
             if (tiempoSimulacion - siguienteEvento.horario > 0.25) {
               clientesPaquetesAtentidosEnMasDe15++
             }
@@ -305,6 +320,7 @@ export function simulacionCorreo(
             }
           }
           break
+        // ... resto de casos sin cambios ...
         case "RyD":
           if (empleadosRyDLibres > 0) {
             empleadosRyDLibres--
@@ -346,7 +362,11 @@ export function simulacionCorreo(
         case "Empresarial":
           if (empleadosEmpresarialLibres > 0) {
             empleadosEmpresarialLibres--
-            clientesAtendidosEmpresarialBajaPrioridad++
+            if (siguienteEvento.prioridad!) {
+              clientesAtendidosEmpresarialAltaPrioridad++
+            } else {
+              clientesAtendidosEmpresarialBajaPrioridad++
+            }
             eventos.push({
               nombre: "Fin Atencion Empresarial",
               horario: tiempoSimulacion + tiempoAtencionEmpresarial,
@@ -428,12 +448,14 @@ export function simulacionCorreo(
           tiempoOcupadosEnvioPaquetes += tiempoAtencionRealizado
 
           if (colaEnvioPaquetes.length > 0) {
+            actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
             const clienteEnCola = colaEnvioPaquetes.shift()!
             empleadosEnvioPaquetesLibres--
             clientesAtendidosEnvioPaquetes++
             tiempoEsperaEnvioPaquetes +=
               tiempoSimulacion - clienteEnCola.horario
 
+            // Cambio: 0.25 horas = 15 minutos
             if (tiempoSimulacion - clienteEnCola.horario > 0.25) {
               clientesPaquetesAtentidosEnMasDe15++
             }
@@ -445,13 +467,13 @@ export function simulacionCorreo(
             })
           }
           if (random.float() > 0.49 && nuevoServicio.habilitado) {
-            // Simular un nuevo servicio
             eventos.push({
               nombre: "Llegada Servicio Nuevo",
               horario: tiempoSimulacion,
             })
           }
           break
+        // ... resto de casos sin cambios significativos ...
         case "RyD":
           empleadosRyDLibres++
           tiempoOcupadosRyD += tiempoAtencionRealizado
@@ -530,7 +552,6 @@ export function simulacionCorreo(
             })
           }
           if (random.float() > 0.49 && nuevoServicio.habilitado) {
-            // Simular un nuevo servicio
             eventos.push({
               nombre: "Llegada Servicio Nuevo",
               horario: tiempoSimulacion,
@@ -546,7 +567,6 @@ export function simulacionCorreo(
             clientesAtendidosNuevoServicio++
             tiempoEsperaNuevoServicio +=
               tiempoSimulacion - clienteEnCola.horario
-            // No se cuenta como cliente atendido, ya que es un nuevo servicio
             eventos.push({
               nombre: "Fin Atencion Nuevo",
               horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
@@ -560,16 +580,27 @@ export function simulacionCorreo(
         empleadosEmpresarialLibres--
         eventos.push({
           nombre: "Retorno Empleado Empresarial",
-          horario: tiempoSimulacion + 0.2, // Simular retorno después de 1 unidad de tiempo
+          horario: tiempoSimulacion + 0.2, // 0.2 horas = 12 minutos
         })
       }
       eventos.push({
         nombre: "Ausencia Empleado Empresarial",
-        horario: tiempoSimulacion + 1,
+        horario: tiempoSimulacion + 1, // Cada 1 hora
       })
     } else if (accion === "Retorno") {
       empleadosEmpresarialLibres++
-      if (colaEmpresarialBajaPrioridad.length > 0) {
+      if (colaEmpresarialAltaPrioridad.length > 0) {
+        const clienteEnCola = colaEmpresarialAltaPrioridad.shift()!
+        empleadosEmpresarialLibres--
+        clientesAtendidosEmpresarialAltaPrioridad++
+        tiempoEsperaEmpresarialAltaPrioridad +=
+          tiempoSimulacion - clienteEnCola.horario
+        eventos.push({
+          nombre: "Fin Atencion Empresarial",
+          horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+          horarioInicio: tiempoSimulacion,
+        })
+      } else if (colaEmpresarialBajaPrioridad.length > 0) {
         const clienteEnCola = colaEmpresarialBajaPrioridad.shift()!
         empleadosEmpresarialLibres--
         clientesAtendidosEmpresarialBajaPrioridad++
@@ -584,7 +615,9 @@ export function simulacionCorreo(
     }
   }
 
-  // Calcular resultados
+  actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
+
+  // Calcular resultados (sin cambios en la lógica de cálculo)
   const resultados: Resultados = {
     promediosEspera: {
       envioPaquetes:
@@ -625,13 +658,14 @@ export function simulacionCorreo(
         clientesAtendidosPyES > 0
           ? parseFloat((tiempoEsperaPyES / clientesAtendidosPyES).toFixed(4))
           : 0,
-      nuevoServicio: nuevoServicio.habilitado
-        ? parseFloat(
-            (
-              tiempoEsperaNuevoServicio / clientesAtendidosNuevoServicio
-            ).toFixed(4)
-          )
-        : 0,
+      nuevoServicio:
+        nuevoServicio.habilitado && clientesAtendidosNuevoServicio > 0
+          ? parseFloat(
+              (
+                tiempoEsperaNuevoServicio / clientesAtendidosNuevoServicio
+              ).toFixed(4)
+            )
+          : 0,
     },
     promediosOcupacion: {
       envioPaquetes: parseFloat(
@@ -683,9 +717,16 @@ export function simulacionCorreo(
       pyES: maxColaPyES,
       nuevoServicio: maxColaNuevoServicio,
     },
-    probabilidadClientesPaquetesAtendidosEnMasDe15:
-      parseFloat(((clientesPaquetesAtentidosEnMasDe15 /
-      (clientesAtendidosEnvioPaquetes || 1))*100).toFixed(4)),
+    probabilidadClientesPaquetesAtendidosEnMasDe15: parseFloat(
+      (
+        (clientesPaquetesAtentidosEnMasDe15 /
+          (clientesAtendidosEnvioPaquetes || 1)) *
+        100
+      ).toFixed(4)
+    ),
+    promedioGenteEnColaEnvioPaquetes: parseFloat(
+      (areaColaEnvioPaquetes / tiempoSimulacion).toFixed(4)
+    ),
   }
 
   return resultados
@@ -693,7 +734,7 @@ export function simulacionCorreo(
 
 // Ejemplo de uso
 const resultados = simulacionCorreo(
-  10000, // Tiempo máximo de simulación en lugar de número de iteraciones
+  100000, // Número de iteraciones
   {
     tiempoAtencionEnvioPaquetes: 1 / 10,
     tiempoAtencionRyD: 1 / 7,
@@ -741,4 +782,8 @@ console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
 console.log(
   "Probabilidad de clientes atendidos en más de 15 minutos:",
   resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
+)
+console.log(
+  "Promedio de gente en cola Envio Paquetes:",
+  resultados.promedioGenteEnColaEnvioPaquetes
 )
