@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./App.css";
-import { VectorEstado } from "./components/vectorEstado";
-import { DefVariables } from "./components/defVariables";
+import { VectorEstado } from "./components/VectorEstado";
+import { DefVariables } from "./components/DefVariables";
 import { Container } from "react-bootstrap";
 import { Resultados } from "./components/Resultados";
 
@@ -26,12 +26,17 @@ function App() {
         <div className="section-card form-section fade-in-up">
           <h2 className="section-title">📋 Configuración de Servicios</h2>
           <DefVariables onSendData={handleDataFromVariables} />
-        </div>
-
-        {/* Sección del vector de estado */}
+        </div>        {/* Sección del vector de estado */}
         <div className="section-card vector-table-container fade-in-up">
-          <h2 className="section-title">📊 Vector de Estado</h2>
-          <VectorEstado />
+          <h2 className="section-title">📊 Vector de Estado</h2>          <VectorEstado 
+            cantidadFilas={formData?.CantidadFilaAMostrar || 10}
+            desdeFilaNumero={formData?.DesdeFilaAMostrar || 1}
+            configuracionesEspeciales={{
+              AusenciaEmpleadoEmpresarial: formData?.AusenciaEmpleadoEmpresarial || false,
+              NuevoServicioPostEntrega: formData?.NuevoServicioPostEntrega || false,
+              ClientesEmpresarialesPrioridad: formData?.ClientesEmpresarialesPrioridad || false
+            }}
+          />
         </div>
 
         {/* Sección de resultados */}

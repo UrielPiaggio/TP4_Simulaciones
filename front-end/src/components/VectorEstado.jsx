@@ -1,8 +1,11 @@
 import React from "react";
 import { Table, Badge } from "react-bootstrap";
 
-export const VectorEstado = () => {
-  const servicios = [
+export const VectorEstado = ({ 
+  cantidadFilas = 10, 
+  desdeFilaNumero = 1, 
+  configuracionesEspeciales = {} 
+}) => {const servicios = [
     { 
       nombre: "📦 Envío de Paquetes", 
       estado: "Activo", 
@@ -26,9 +29,9 @@ export const VectorEstado = () => {
     },
     { 
       nombre: "🏢 Atención Empresarial", 
-      estado: "Activo", 
+      estado: configuracionesEspeciales.AusenciaEmpleadoEmpresarial ? "Ausente" : "Activo", 
       clientes: 5, 
-      servidores: 2,
+      servidores: configuracionesEspeciales.AusenciaEmpleadoEmpresarial ? 0 : 2,
       color: "#10b981"
     },
     { 
@@ -40,18 +43,67 @@ export const VectorEstado = () => {
     }
   ];
 
-  const tiempos = Array.from({ length: 12 }, (_, i) => `T${i + 1}`);
+  // Agregar servicio post-entrega si está habilitado
+  if (configuracionesEspeciales.NuevoServicioPostEntrega) {
+    servicios.push({
+      nombre: "📮 Servicio Post-Entrega",
+      estado: "Activo",
+      clientes: 2,
+      servidores: 1,
+      color: "#ef4444"
+    });
+  }
 
+  // Generar array de tiempos basado en la configuración
+  const tiempos = Array.from({ length: cantidadFilas }, (_, i) => `T${desdeFilaNumero + i}`);
   // Función para generar valores simulados más realistas
   const getSimulatedValue = (rowIndex, colIndex) => {
-    const baseValues = [12, 8, 15, 5, 3];
-    const base = baseValues[rowIndex];
+    const baseValues = [12, 8, 15, 5, 3, 2]; // Agregado valor para servicio post-entrega
+    const base = baseValues[rowIndex] || 1;
+    
+    // Si es servicio empresarial y está ausente, retornar 0
+    if (rowIndex === 3 && configuracionesEspeciales.AusenciaEmpleadoEmpresarial) {
+      return 0;
+    }
+    
+    // Si hay prioridad empresarial, ajustar valores para servicio empresarial
+    if (rowIndex === 3 && configuracionesEspeciales.ClientesEmpresarialesPrioridad) {
+      const priorityBonus = Math.floor(Math.random() * 3) + 2; // +2 a +4
+      return Math.max(0, base + priorityBonus);
+    }
+    
     const variation = Math.floor(Math.random() * 6) - 3; // -3 a +3
-    return Math.max(0, base + variation);
+    return Math.max(0, base + variation + colIndex % 2); // Pequeña variación por tiempo
   };
-
   return (
     <div className="vector-estado-wrapper">
+      {/* Indicadores de configuraciones especiales activas */}
+      {(configuracionesEspeciales.AusenciaEmpleadoEmpresarial || 
+        configuracionesEspeciales.NuevoServicioPostEntrega || 
+        configuracionesEspeciales.ClientesEmpresarialesPrioridad) && (
+        <div className="special-config-indicators">
+          <h6 className="indicators-title">⚙️ Configuraciones Especiales Activas:</h6>
+          <div className="indicators-list">
+            {configuracionesEspeciales.AusenciaEmpleadoEmpresarial && (
+              <span className="config-indicator ausencia">🏢❌ Empleado Empresarial Ausente</span>
+            )}
+            {configuracionesEspeciales.NuevoServicioPostEntrega && (
+              <span className="config-indicator post-entrega">📦✨ Servicio Post-Entrega Activo</span>
+            )}
+            {configuracionesEspeciales.ClientesEmpresarialesPrioridad && (
+              <span className="config-indicator prioridad">🏢⭐ Prioridad Empresarial</span>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Información de tabla */}
+      <div className="table-info">
+        <small className="text-muted">
+          📋 Mostrando {cantidadFilas} filas desde T{desdeFilaNumero} hasta T{desdeFilaNumero + cantidadFilas - 1}
+        </small>
+      </div>
+      
       <div className="table-responsive">
         <Table className="vector-table" borderless>
           <thead>
@@ -101,10 +153,13 @@ export const VectorEstado = () => {
                     ></div>
                     <span className="service-title">{servicio.nombre}</span>
                   </div>
-                </td>
-                <td className="text-center">
-                  <Badge bg="success" className="status-badge">
+                </td>                <td className="text-center">
+                  <Badge 
+                    bg={servicio.estado === "Ausente" ? "danger" : "success"} 
+                    className="status-badge"
+                  >
                     {servicio.estado}
+                    {rowIndex === 3 && configuracionesEspeciales.ClientesEmpresarialesPrioridad && servicio.estado === "Activo" ? " ⭐" : ""}
                   </Badge>
                 </td>
                 <td className="text-center">

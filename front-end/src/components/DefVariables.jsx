@@ -1,14 +1,13 @@
-import React from "react";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import FloatingLabel from "react-bootstrap/FloatingLabel";
-import Button from "react-bootstrap/Button";
-import { useState } from "react";
+import React from "react"
+import Container from "react-bootstrap/Container"
+import Row from "react-bootstrap/Row"
+import Col from "react-bootstrap/Col"
+import Form from "react-bootstrap/Form"
+import FloatingLabel from "react-bootstrap/FloatingLabel"
+import Button from "react-bootstrap/Button"
+import { useState } from "react"
 
-export const DefVariables = ({ onSendData }) => {
-  const [formDatos, setFormDatos] = useState({
+export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDatos] = useState({
     LlegadaCTS1: 25,
     CantiSerTS1: 3,
     TasaLlegadaTS1: 10,
@@ -24,54 +23,66 @@ export const DefVariables = ({ onSendData }) => {
     LlegadaCTS5: 8,
     CantiSerTS5: 1,
     TasaLlegadaTS5: 3,
-  });
+    CantidadFilaAMostrar: 10,
+    DesdeFilaAMostrar: 10,
+    // Configuraciones especiales (booleanos)
+    AusenciaEmpleadoEmpresarial: false,
+    NuevoServicioPostEntrega: false,
+    ClientesEmpresarialesPrioridad: false,
+  })
 
-  console.log(formDatos);
-
+  console.log(formDatos)
   const handleChange = (e) => {
     setFormDatos({
       ...formDatos,
       [e.target.name]: parseInt(e.target.value),
-    });
-  };
+    })
+  }
+
+  const handleCheckboxChange = (e) => {
+    setFormDatos({
+      ...formDatos,
+      [e.target.name]: e.target.checked,
+    })
+  }
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    onSendData(formDatos);
-  };
+    e.preventDefault()
+    onSendData(formDatos)
+  }
 
   const serviceConfigs = [
     {
       title: "📦 Envío de Paquetes",
       icon: "📦",
       prefix: "TS1",
-      color: "#6366f1"
+      color: "#6366f1",
     },
     {
-      title: "🔄 Reclamos y Devoluciones", 
+      title: "🔄 Reclamos y Devoluciones",
       icon: "🔄",
       prefix: "TS2",
-      color: "#8b5cf6"
+      color: "#8b5cf6",
     },
     {
       title: "💌 Venta de Sellos y Sobres",
-      icon: "💌", 
+      icon: "💌",
       prefix: "TS3",
-      color: "#06b6d4"
+      color: "#06b6d4",
     },
     {
       title: "🏢 Atención Empresarial",
       icon: "🏢",
-      prefix: "TS4", 
-      color: "#10b981"
+      prefix: "TS4",
+      color: "#10b981",
     },
     {
       title: "✉️ Postales y Envíos Especiales",
       icon: "✉️",
       prefix: "TS5",
-      color: "#f59e0b"
-    }
-  ];
+      color: "#f59e0b",
+    },
+  ]
 
   return (
     <>
@@ -87,7 +98,7 @@ export const DefVariables = ({ onSendData }) => {
                   {service.title}
                 </div>
               </div>
-              
+
               <div className="service-inputs-container">
                 <FloatingLabel
                   controlId={`llegada-${service.prefix}`}
@@ -129,9 +140,112 @@ export const DefVariables = ({ onSendData }) => {
                 </FloatingLabel>
               </div>
             </div>
-          ))}
+          ))}{" "}
         </div>
-        
+
+        {/* Configuración de tabla */}
+        <div className="table-config-section">
+          <h5 className="config-title">
+            📊 Configuración de Tabla de Resultados
+          </h5>
+          <Row className="g-3">
+            <Col md={6}>
+              <FloatingLabel
+                controlId="cantidadFilaAMostrar"
+                label="📋 Cantidad de filas a mostrar"
+              >
+                <Form.Control
+                  type="number"
+                  name="CantidadFilaAMostrar"
+                  defaultValue={formDatos.CantidadFilaAMostrar}
+                  onChange={handleChange}
+                  min="1"
+                  max="1000"
+                />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel
+                controlId="desdeFilaAMostrar"
+                label="🔢 Desde fila número"
+              >
+                <Form.Control
+                  type="number"
+                  name="DesdeFilaAMostrar"
+                  defaultValue={formDatos.DesdeFilaAMostrar}
+                  onChange={handleChange}
+                  min="1"
+                />
+              </FloatingLabel>
+            </Col>
+          </Row>        </div>
+
+        {/* Configuraciones Especiales */}
+        <div className="special-config-section">
+          <h5 className="special-config-title">
+            ⚙️ Configuraciones Especiales del Sistema
+          </h5>
+          <Row className="g-4">
+            <Col md={4}>
+              <div className="checkbox-card">
+                <Form.Check
+                  type="checkbox"
+                  id="ausenciaEmpleadoEmpresarial"
+                  name="AusenciaEmpleadoEmpresarial"
+                  checked={formDatos.AusenciaEmpleadoEmpresarial}
+                  onChange={handleCheckboxChange}
+                  className="custom-checkbox"
+                />
+                <div className="checkbox-content">
+                  <div className="checkbox-icon">🏢❌</div>
+                  <div className="checkbox-label">
+                    <strong>Ausencia de Empleado</strong>
+                    <small>Empleado de atención empresarial ausente</small>
+                  </div>
+                </div>
+              </div>
+            </Col>
+            <Col md={4}>
+              <div className="checkbox-card">
+                <Form.Check
+                  type="checkbox"
+                  id="nuevoServicioPostEntrega"
+                  name="NuevoServicioPostEntrega"
+                  checked={formDatos.NuevoServicioPostEntrega}
+                  onChange={handleCheckboxChange}
+                  className="custom-checkbox"
+                />
+                <div className="checkbox-content">
+                  <div className="checkbox-icon">📦✨</div>
+                  <div className="checkbox-label">
+                    <strong>Servicio Post-Entrega</strong>
+                    <small>Nuevo servicio después de entrega de paquetes/postales</small>
+                  </div>
+                </div>
+              </div>
+            </Col>
+            <Col md={4}>
+              <div className="checkbox-card">
+                <Form.Check
+                  type="checkbox"
+                  id="clientesEmpresarialesPrioridad"
+                  name="ClientesEmpresarialesPrioridad"
+                  checked={formDatos.ClientesEmpresarialesPrioridad}
+                  onChange={handleCheckboxChange}
+                  className="custom-checkbox"
+                />
+                <div className="checkbox-content">
+                  <div className="checkbox-icon">🏢⭐</div>
+                  <div className="checkbox-label">
+                    <strong>Prioridad Empresarial</strong>
+                    <small>Clientes empresariales con atención prioritaria</small>
+                  </div>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
+
         <div className="text-center">
           <Button variant="primary" className="simulate-btn" type="submit">
             🚀 Ejecutar Simulación
@@ -139,5 +253,5 @@ export const DefVariables = ({ onSendData }) => {
         </div>
       </Form>
     </>
-  );
-};
+  )
+}
