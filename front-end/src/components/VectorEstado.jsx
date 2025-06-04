@@ -1,5 +1,6 @@
 import React from "react"
 import { Table, Badge } from "react-bootstrap"
+import { getSimulationResults } from "../../services/serviceSim"
 
 export const VectorEstado = ({
   cantidadFilas = 10,
