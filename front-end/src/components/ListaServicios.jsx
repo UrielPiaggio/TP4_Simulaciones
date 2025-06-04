@@ -2,35 +2,35 @@ import React from "react"
 import { Table, Badge } from "react-bootstrap"
 import { getSimulationResults } from "../../services/serviceSim"
 
-export const VectorEstado = ({
+export const ListaServicios = ({
   cantidadFilas = 10,
   desdeFilaNumero = 1,
   configuracionesEspeciales = {},
 }) => {
   const servicios = [
     {
-      nombre: "📦 Envío de Paquetes",
+      nombre: "📦 Envío de Paquetes S1",
       estado: "Activo",
       clientes: 12,
       servidores: 3,
       color: "#4f46e5",
     },
     {
-      nombre: "🔄 Reclamos y Devoluciones",
+      nombre: "🔄 Reclamos y Devoluciones S2",
       estado: "Activo",
       clientes: 8,
       servidores: 2,
       color: "#8b5cf6",
     },
     {
-      nombre: "💌 Venta de Sellos y Sobres",
+      nombre: "💌 Venta de Sellos y Sobres S3",
       estado: "Activo",
       clientes: 15,
       servidores: 3,
       color: "#06b6d4",
     },
     {
-      nombre: "🏢 Atención Empresarial",
+      nombre: "🏢 Atención Empresarial S4",
       estado: configuracionesEspeciales.AusenciaEmpleadoEmpresarial
         ? "Ausente"
         : "Activo",
@@ -39,7 +39,7 @@ export const VectorEstado = ({
       color: "#10b981",
     },
     {
-      nombre: "✉️ Postales y Envíos Especiales",
+      nombre: "✉️ Postales y Envíos Especiales S5",
       estado: "Activo",
       clientes: 3,
       servidores: 1,
@@ -162,16 +162,7 @@ export const VectorEstado = ({
                   </span>
                 </div>
               </th>
-              {tiempos.map((tiempo, index) => (
-                <th key={index} className="text-center time-header">
-                  <div
-                    className="time-badge"
-                    style={{ color: "#ffffff", fontWeight: "600" }}
-                  >
-                    {tiempo}
-                  </div>
-                </th>
-              ))}
+                
             </tr>
           </thead>
 
@@ -186,7 +177,7 @@ export const VectorEstado = ({
                     ></div>
                     <span className="service-title">{servicio.nombre}</span>
                   </div>
-                </td>{" "}
+                </td>
                 <td className="text-center">
                   <Badge
                     bg={servicio.estado === "Ausente" ? "danger" : "success"}
@@ -224,21 +215,8 @@ export const VectorEstado = ({
                     {servicio.servidores}
                   </div>
                 </td>
-                {tiempos.map((_, colIndex) => (
-                  <td key={colIndex} className="text-center time-cell">
-                    <div
-                      className="time-value"
-                      style={{
-                        backgroundColor: `${servicio.color}15`,
-                        color: servicio.color,
-                        border: `1px solid ${servicio.color}40`,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {getSimulatedValue(rowIndex, colIndex)}
-                    </div>
-                  </td>
-                ))}
+                  
+                
               </tr>
             ))}
           </tbody>

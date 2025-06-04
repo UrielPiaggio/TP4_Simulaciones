@@ -1,9 +1,10 @@
 import { useState } from "react"
 import "./App.css"
-import { VectorEstado } from "./components/VectorEstado"
+import { ListaServicios } from "./components/ListaServicios"
 import { DefVariables } from "./components/DefVariables"
 import { Container } from "react-bootstrap"
 import { Resultados } from "./components/Resultados"
+import VecEstado from "./components/VecEstado"
 
 function App() {
   const [formData, setFormData] = useState(null)
@@ -28,19 +29,11 @@ function App() {
         </div>{" "}
         {/* Sección del vector de estado */}
         <div className="section-card vector-table-container fade-in-up">
-          <h2 className="section-title">📊 Vector de Estado</h2>{" "}
-          <VectorEstado
-            cantidadFilas={formData?.CantidadFilaAMostrar || 10}
-            desdeFilaNumero={formData?.DesdeFilaAMostrar || 1}
-            configuracionesEspeciales={{
-              AusenciaEmpleadoEmpresarial:
-                formData?.AusenciaEmpleadoEmpresarial || false,
-              NuevoServicioPostEntrega:
-                formData?.NuevoServicioPostEntrega || false,
-              ClientesEmpresarialesPrioridad:
-                formData?.ClientesEmpresarialesPrioridad || false,
-            }}
-          />
+          <h2 className="section-title">📊 Lista de Servicios</h2>{" "}
+          <ListaServicios />
+        </div>
+        <div className="section-card vector-table-container fade-in-up">
+          <h2 className="section-title">📊 Vector de Estado</h2> <VecEstado />
         </div>
         {/* Sección de resultados */}
         <div className="section-card results-section fade-in-up">
