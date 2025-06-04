@@ -6,8 +6,10 @@ import Form from "react-bootstrap/Form"
 import FloatingLabel from "react-bootstrap/FloatingLabel"
 import Button from "react-bootstrap/Button"
 import { useState } from "react"
+import { postSimulationData } from "../../services/serviceSim"
 
-export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDatos] = useState({
+export const DefVariables = ({ onSendData }) => {
+  const [formDatos, setFormDatos] = useState({
     LlegadaCTS1: 25,
     CantiSerTS1: 3,
     TasaLlegadaTS1: 10,
@@ -25,7 +27,6 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
     TasaLlegadaTS5: 3,
     CantidadFilaAMostrar: 10,
     DesdeFilaAMostrar: 10,
-    // Configuraciones especiales (booleanos)
     AusenciaEmpleadoEmpresarial: false,
     NuevoServicioPostEntrega: false,
     ClientesEmpresarialesPrioridad: false,
@@ -49,6 +50,17 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
   const handleSubmit = (e) => {
     e.preventDefault()
     onSendData(formDatos)
+    try {
+      postSimulationData(formDatos)
+        .then((response) => {
+          console.log("Datos enviados correctamente:", response)
+        })
+        .catch((error) => {
+          console.error("Error al enviar los datos:", error)
+        })
+    } catch (error) {
+      console.error("Error en el envío de datos:", error)
+    }
   }
 
   const serviceConfigs = [
@@ -178,7 +190,8 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
                 />
               </FloatingLabel>
             </Col>
-          </Row>        </div>
+          </Row>{" "}
+        </div>
 
         {/* Configuraciones Especiales */}
         <div className="special-config-section">
@@ -197,7 +210,7 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
                   className="custom-checkbox"
                 />
                 <div className="checkbox-content">
-                  <div className="checkbox-icon">🏢❌</div>
+                  <div className="checkbox-icon">👷🏻‍♂️❌</div>
                   <div className="checkbox-label">
                     <strong>Ausencia de Empleado</strong>
                     <small>Empleado de atención empresarial ausente</small>
@@ -219,7 +232,9 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
                   <div className="checkbox-icon">📦✨</div>
                   <div className="checkbox-label">
                     <strong>Servicio Post-Entrega</strong>
-                    <small>Nuevo servicio después de entrega de paquetes/postales</small>
+                    <small>
+                      Nuevo servicio después de entrega de paquetes/postales
+                    </small>
                   </div>
                 </div>
               </div>
@@ -235,10 +250,12 @@ export const DefVariables = ({ onSendData }) => {  const [formDatos, setFormDato
                   className="custom-checkbox"
                 />
                 <div className="checkbox-content">
-                  <div className="checkbox-icon">🏢⭐</div>
+                  <div className="checkbox-icon">👨🏼‍💼⭐</div>
                   <div className="checkbox-label">
                     <strong>Prioridad Empresarial</strong>
-                    <small>Clientes empresariales con atención prioritaria</small>
+                    <small>
+                      Clientes empresariales con atención prioritaria
+                    </small>
                   </div>
                 </div>
               </div>

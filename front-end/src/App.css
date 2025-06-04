@@ -670,7 +670,11 @@ body {
 
 /* Sección de configuraciones especiales */
 .special-config-section {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.05) 0%,
+    rgba(236, 72, 153, 0.05) 100%
+  );
   border: 1px solid rgba(139, 92, 246, 0.15);
   border-radius: 16px;
   padding: 2rem;
@@ -688,7 +692,7 @@ body {
 }
 
 .special-config-title::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -8px;
   left: 50%;
@@ -766,7 +770,11 @@ body {
 
 /* Estado activo de las cards */
 .checkbox-card:has(.custom-checkbox input:checked) {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(236, 72, 153, 0.08) 100%
+  );
   border-color: #8b5cf6;
   box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
 }
@@ -777,7 +785,11 @@ body {
 
 /* Indicadores de configuraciones especiales en la tabla */
 .special-config-indicators {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(79, 70, 229, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 100%
+  );
   border: 1px solid rgba(79, 70, 229, 0.1);
   border-radius: 12px;
   padding: 1rem 1.5rem;
@@ -845,33 +857,33 @@ body {
   .special-config-section {
     padding: 1.5rem;
   }
-  
+
   .checkbox-card {
     padding: 1.2rem;
     margin-bottom: 1rem;
   }
-  
+
   .checkbox-icon {
     font-size: 2rem;
   }
-  
+
   .checkbox-label strong {
     font-size: 0.9rem;
   }
-  
+
   .checkbox-label small {
     font-size: 0.8rem;
   }
-  
+
   .special-config-indicators {
     padding: 0.8rem 1rem;
   }
-  
+
   .indicators-list {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .config-indicator {
     font-size: 0.8rem;
     text-align: center;
