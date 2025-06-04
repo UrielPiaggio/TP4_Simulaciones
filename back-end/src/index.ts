@@ -72,6 +72,132 @@ function procesarColaServicio(
 
 export type Distribuciones = "exponencial" | "uniforme" | "normal" | "poisson"
 
+export type VectorEstado = {
+  numeroIteracion: number
+  evento: string
+  horario: number
+  EnvioPaquetes: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+      FinAtencion2: number
+      FinAtencion3: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+      Servidor2: string
+      Servidor3: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+  RyD: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+      FinAtencion2: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+      Servidor2: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+  SyS: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+      FinAtencion2: number
+      FinAtencion3: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+      Servidor2: string
+      Servidor3: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+  Empresarial: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+      FinAtencion2: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+      Servidor2: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+  PyES: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+  ServicioEspecial?: {
+    LlegadaCliente: {
+      RND: number
+      tiempo: number
+      llegada: number
+    }
+    FinAtencion: {
+      FinAtencion1: number
+    }
+    Cola: number
+    EstadoServidores: {
+      Servidor1: string
+    }
+    Metricas: {
+      esperaPromedio: number
+      porcentajeOcupacion: number
+    }
+  }
+}
+
 export type TiempoLlegada = {
   distribucion: Distribuciones
   media: number
@@ -199,10 +325,250 @@ export function simulacionCorreo(
   let tiempoUltimaActualizacionColaEnvio = 0
   let areaColaEnvioPaquetes = 0
 
+  // Vector de estados para mostrar iteraciones específicas
+  const vectorEstados: VectorEstado[] = []
+  const iteracionFinal = iteracionAMostrarPrimero + cantidadDeFilasAMostrar - 1
+
+  // Variables para tracking de RNDs y próximas llegadas
+  let ultimoRNDEnvioPaquetes = 0
+  let ultimoRNDRyD = 0
+  let ultimoRNDSyS = 0
+  let ultimoRNDEmpresarial = 0
+  let ultimoRNDPyES = 0
+
+  // Variables para tracking de próximas llegadas
+  let proximaLlegadaEnvioPaquetes = 0
+  let proximaLlegadaRyD = 0
+  let proximaLlegadaSyS = 0
+  let proximaLlegadaEmpresarial = 0
+  let proximaLlegadaPyES = 0
+  let proximaLlegadaNuevoServicio = 0
+
+  // Arrays para tracking de fin de atención por servidor
+  const finAtencionEnvioPaquetes: number[] = new Array(
+    empleadosEnvioPaquetes
+  ).fill(0)
+  const finAtencionRyD: number[] = new Array(empleadosRyD).fill(0)
+  const finAtencionSyS: number[] = new Array(empleadosSyS).fill(0)
+  const finAtencionEmpresarial: number[] = new Array(empleadosEmpresarial).fill(
+    0
+  )
+  const finAtencionPyES: number[] = new Array(empleadosPyES).fill(0)
+  const finAtencionNuevoServicio: number[] = new Array(
+    nuevoServicio.numeroEmpleados
+  ).fill(0)
+
+  // Estados de servidores (L = Libre, O = Ocupado)
+  const estadoServidoresEnvioPaquetes: string[] = new Array(
+    empleadosEnvioPaquetes
+  ).fill("L")
+  const estadoServidoresRyD: string[] = new Array(empleadosRyD).fill("L")
+  const estadoServidoresSyS: string[] = new Array(empleadosSyS).fill("L")
+  const estadoServidoresEmpresarial: string[] = new Array(
+    empleadosEmpresarial
+  ).fill("L")
+  const estadoServidoresPyES: string[] = new Array(empleadosPyES).fill("L")
+  const estadoServidoresNuevoServicio: string[] = new Array(
+    nuevoServicio.numeroEmpleados
+  ).fill("L")
+
   function actualizarAreaColaEnvioPaquetes(tiempoActual: number) {
     const tiempoTranscurrido = tiempoActual - tiempoUltimaActualizacionColaEnvio
     areaColaEnvioPaquetes += colaEnvioPaquetes.length * tiempoTranscurrido
     tiempoUltimaActualizacionColaEnvio = tiempoActual
+  }
+
+  function crearVectorEstado(
+    iteracion: number,
+    evento: string,
+    horario: number
+  ): VectorEstado {
+    // Función para crear objeto dinámico de fin de atención
+    const crearFinAtencion = (array: number[]) => {
+      const obj: any = {}
+      array.forEach((valor, index) => {
+        obj[`FinAtencion${index + 1}`] = valor
+      })
+      return obj
+    }
+
+    // Función para crear objeto dinámico de estado de servidores
+    const crearEstadoServidores = (array: string[]) => {
+      const obj: any = {}
+      array.forEach((estado, index) => {
+        obj[`Servidor${index + 1}`] = estado
+      })
+      return obj
+    }
+
+    const vectorEstado: VectorEstado = {
+      numeroIteracion: iteracion,
+      evento: evento,
+      horario: parseFloat(horario.toFixed(4)),
+      EnvioPaquetes: {
+        LlegadaCliente: {
+          RND: ultimoRNDEnvioPaquetes,
+          tiempo: 0, // Se actualizará según el evento
+          llegada: 0, // Se actualizará según el evento
+        },
+        FinAtencion: crearFinAtencion(finAtencionEnvioPaquetes),
+        Cola: colaEnvioPaquetes.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresEnvioPaquetes),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosEnvioPaquetes > 0
+              ? parseFloat(
+                  (
+                    tiempoEsperaEnvioPaquetes / clientesAtendidosEnvioPaquetes
+                  ).toFixed(4)
+                )
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadosEnvioPaquetes /
+                (tiempoSimulacion * empleadosEnvioPaquetes)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      },
+      RyD: {
+        LlegadaCliente: {
+          RND: ultimoRNDRyD,
+          tiempo: 0,
+          llegada: 0,
+        },
+        FinAtencion: crearFinAtencion(finAtencionRyD),
+        Cola: colaRyD.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresRyD),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosRyD > 0
+              ? parseFloat((tiempoEsperaRyD / clientesAtendidosRyD).toFixed(4))
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadosRyD / (tiempoSimulacion * empleadosRyD)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      },
+      SyS: {
+        LlegadaCliente: {
+          RND: ultimoRNDSyS,
+          tiempo: 0,
+          llegada: 0,
+        },
+        FinAtencion: crearFinAtencion(finAtencionSyS),
+        Cola: colaSyS.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresSyS),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosSyS > 0
+              ? parseFloat((tiempoEsperaSyS / clientesAtendidosSyS).toFixed(4))
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadosSyS / (tiempoSimulacion * empleadosSyS)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      },
+      Empresarial: {
+        LlegadaCliente: {
+          RND: ultimoRNDEmpresarial,
+          tiempo: 0,
+          llegada: 0,
+        },
+        FinAtencion: crearFinAtencion(finAtencionEmpresarial),
+        Cola: prioridadEnEmpresarial
+          ? colaEmpresarialAltaPrioridad.length +
+            colaEmpresarialBajaPrioridad.length
+          : colaEmpresarialBajaPrioridad.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresEmpresarial),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosEmpresarialAltaPrioridad +
+              clientesAtendidosEmpresarialBajaPrioridad >
+            0
+              ? parseFloat(
+                  (
+                    (tiempoEsperaEmpresarialAltaPrioridad +
+                      tiempoEsperaEmpresarialBajaPrioridad) /
+                    (clientesAtendidosEmpresarialAltaPrioridad +
+                      clientesAtendidosEmpresarialBajaPrioridad)
+                  ).toFixed(4)
+                )
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadosEmpresarial /
+                (tiempoSimulacion * empleadosEmpresarial)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      },
+      PyES: {
+        LlegadaCliente: {
+          RND: ultimoRNDPyES,
+          tiempo: 0,
+          llegada: 0,
+        },
+        FinAtencion: crearFinAtencion(finAtencionPyES),
+        Cola: colaPyES.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresPyES),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosPyES > 0
+              ? parseFloat(
+                  (tiempoEsperaPyES / clientesAtendidosPyES).toFixed(4)
+                )
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadosPyES / (tiempoSimulacion * empleadosPyES)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      },
+    }
+
+    // Agregar servicio especial si está habilitado
+    if (nuevoServicio.habilitado) {
+      vectorEstado.ServicioEspecial = {
+        LlegadaCliente: {
+          RND: 0, // Se actualizará según corresponda
+          tiempo: 0,
+          llegada: 0,
+        },
+        FinAtencion: crearFinAtencion(finAtencionNuevoServicio),
+        Cola: colaNuevoServicio.length,
+        EstadoServidores: crearEstadoServidores(estadoServidoresNuevoServicio),
+        Metricas: {
+          esperaPromedio:
+            clientesAtendidosNuevoServicio > 0
+              ? parseFloat(
+                  (
+                    tiempoEsperaNuevoServicio / clientesAtendidosNuevoServicio
+                  ).toFixed(4)
+                )
+              : 0,
+          porcentajeOcupacion: parseFloat(
+            (
+              (tiempoOcupadoNuevoServicio /
+                (tiempoSimulacion * nuevoServicio.numeroEmpleados)) *
+              100
+            ).toFixed(4)
+          ),
+        },
+      }
+    }
+
+    return vectorEstado
   }
 
   // Programar primeras llegadas
@@ -251,34 +617,42 @@ export function simulacionCorreo(
       let proximaLlegada: number
       switch (servicio) {
         case "EnvioPaquetes":
+          ultimoRNDEnvioPaquetes = random.float()
           proximaLlegada = exponencial(
             tiempoLlegadaEnvioPaquetes.media,
-            random.float()
+            ultimoRNDEnvioPaquetes
           )
+          proximaLlegadaEnvioPaquetes = proximaLlegada
           eventos.push({
             nombre: "Llegada Cliente EnvioPaquetes",
             horario: tiempoSimulacion + proximaLlegada,
           })
           break
         case "RyD":
-          proximaLlegada = exponencial(tiempoLlegadaRyD.media, random.float())
+          ultimoRNDRyD = random.float()
+          proximaLlegada = exponencial(tiempoLlegadaRyD.media, ultimoRNDRyD)
+          proximaLlegadaRyD = proximaLlegada
           eventos.push({
             nombre: "Llegada Cliente RyD",
             horario: tiempoSimulacion + proximaLlegada,
           })
           break
         case "SyS":
-          proximaLlegada = exponencial(tiempoLlegadaSyS.media, random.float())
+          ultimoRNDSyS = random.float()
+          proximaLlegada = exponencial(tiempoLlegadaSyS.media, ultimoRNDSyS)
+          proximaLlegadaSyS = proximaLlegada
           eventos.push({
             nombre: "Llegada Cliente SyS",
             horario: tiempoSimulacion + proximaLlegada,
           })
           break
         case "Empresarial":
+          ultimoRNDEmpresarial = random.float()
           proximaLlegada = exponencial(
             tiempoLlegadaEmpresarial.media,
-            random.float()
+            ultimoRNDEmpresarial
           )
+          proximaLlegadaEmpresarial = proximaLlegada
           eventos.push({
             nombre: "Llegada Cliente Empresarial",
             horario: tiempoSimulacion + proximaLlegada,
@@ -286,7 +660,9 @@ export function simulacionCorreo(
           })
           break
         case "PyES":
-          proximaLlegada = exponencial(tiempoLlegadaPyES.media, random.float())
+          ultimoRNDPyES = random.float()
+          proximaLlegada = exponencial(tiempoLlegadaPyES.media, ultimoRNDPyES)
+          proximaLlegadaPyES = proximaLlegada
           eventos.push({
             nombre: "Llegada Cliente PyES",
             horario: tiempoSimulacion + proximaLlegada,
@@ -301,6 +677,16 @@ export function simulacionCorreo(
           if (empleadosEnvioPaquetesLibres > 0) {
             empleadosEnvioPaquetesLibres--
             clientesAtendidosEnvioPaquetes++
+
+            const servidorIndex = estadoServidoresEnvioPaquetes.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresEnvioPaquetes[servidorIndex] = "O"
+              finAtencionEnvioPaquetes[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionEnvioPaquetes
+            }
+
             // Cambio: 0.25 horas = 15 minutos
             if (tiempoSimulacion - siguienteEvento.horario > 0.25) {
               clientesPaquetesAtentidosEnMasDe15++
@@ -325,6 +711,16 @@ export function simulacionCorreo(
           if (empleadosRyDLibres > 0) {
             empleadosRyDLibres--
             clientesAtendidosRyD++
+
+            const servidorIndex = estadoServidoresRyD.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresRyD[servidorIndex] = "O"
+              finAtencionRyD[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionRyD
+            }
+
             eventos.push({
               nombre: "Fin Atencion RyD",
               horario: tiempoSimulacion + tiempoAtencionRyD,
@@ -344,6 +740,15 @@ export function simulacionCorreo(
           if (empleadosSySLibres > 0) {
             empleadosSySLibres--
             clientesAtendidosSyS++
+
+            const servidorIndex = estadoServidoresSyS.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresSyS[servidorIndex] = "O"
+              finAtencionSyS[servidorIndex] = tiempoSimulacion + tiempoVentaSyS
+            }
+
             eventos.push({
               nombre: "Fin Atencion SyS",
               horario: tiempoSimulacion + tiempoVentaSyS,
@@ -367,6 +772,16 @@ export function simulacionCorreo(
             } else {
               clientesAtendidosEmpresarialBajaPrioridad++
             }
+
+            const servidorIndex = estadoServidoresEmpresarial.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresEmpresarial[servidorIndex] = "O"
+              finAtencionEmpresarial[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionEmpresarial
+            }
+
             eventos.push({
               nombre: "Fin Atencion Empresarial",
               horario: tiempoSimulacion + tiempoAtencionEmpresarial,
@@ -404,6 +819,16 @@ export function simulacionCorreo(
           if (empleadosPyESLibres > 0) {
             empleadosPyESLibres--
             clientesAtendidosPyES++
+
+            const servidorIndex = estadoServidoresPyES.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresPyES[servidorIndex] = "O"
+              finAtencionPyES[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionPyES
+            }
+
             eventos.push({
               nombre: "Fin Atencion PyES",
               horario: tiempoSimulacion + tiempoAtencionPyES,
@@ -422,6 +847,18 @@ export function simulacionCorreo(
         case "Nuevo":
           if (empleadosNuevoServicioLibres > 0) {
             empleadosNuevoServicioLibres--
+
+            clientesAtendidosNuevoServicio++
+
+            const servidorIndex = estadoServidoresNuevoServicio.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresNuevoServicio[servidorIndex] = "O"
+              finAtencionNuevoServicio[servidorIndex] =
+                tiempoSimulacion + nuevoServicio.tiempoAtencion
+            }
+
             eventos.push({
               nombre: "Fin Atencion Nuevo",
               horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
@@ -447,11 +884,27 @@ export function simulacionCorreo(
           empleadosEnvioPaquetesLibres++
           tiempoOcupadosEnvioPaquetes += tiempoAtencionRealizado
 
+          const servidorLiberadoEnvio = finAtencionEnvioPaquetes.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoEnvio !== -1) {
+            estadoServidoresEnvioPaquetes[servidorLiberadoEnvio] = "L"
+            finAtencionEnvioPaquetes[servidorLiberadoEnvio] = 0
+          }
+
           if (colaEnvioPaquetes.length > 0) {
             actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
             const clienteEnCola = colaEnvioPaquetes.shift()!
             empleadosEnvioPaquetesLibres--
             clientesAtendidosEnvioPaquetes++
+            const nuevoServidorIndex = estadoServidoresEnvioPaquetes.findIndex(
+              (estado) => estado === "L"
+            )
+            if (nuevoServidorIndex !== -1) {
+              estadoServidoresEnvioPaquetes[nuevoServidorIndex] = "O"
+              finAtencionEnvioPaquetes[nuevoServidorIndex] =
+                tiempoSimulacion + tiempoAtencionEnvioPaquetes
+            }
             tiempoEsperaEnvioPaquetes +=
               tiempoSimulacion - clienteEnCola.horario
 
@@ -478,10 +931,26 @@ export function simulacionCorreo(
           empleadosRyDLibres++
           tiempoOcupadosRyD += tiempoAtencionRealizado
 
+          const servidorLiberadoRyD = finAtencionRyD.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoRyD !== -1) {
+            estadoServidoresRyD[servidorLiberadoRyD] = "L"
+            finAtencionRyD[servidorLiberadoRyD] = 0
+          }
+
           if (colaRyD.length > 0) {
             const clienteEnCola = colaRyD.shift()!
             empleadosRyDLibres--
             clientesAtendidosRyD++
+            const nuevoServidorIndex = estadoServidoresRyD.findIndex(
+              (estado) => estado === "L"
+            )
+            if (nuevoServidorIndex !== -1) {
+              estadoServidoresRyD[nuevoServidorIndex] = "O"
+              finAtencionRyD[nuevoServidorIndex] =
+                tiempoSimulacion + tiempoAtencionRyD
+            }
             tiempoEsperaRyD += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion RyD",
@@ -493,11 +962,26 @@ export function simulacionCorreo(
         case "SyS":
           empleadosSySLibres++
           tiempoOcupadosSyS += tiempoAtencionRealizado
+          const servidorLiberadoSyS = finAtencionSyS.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoSyS !== -1) {
+            estadoServidoresSyS[servidorLiberadoSyS] = "L"
+            finAtencionSyS[servidorLiberadoSyS] = 0
+          }
 
           if (colaSyS.length > 0) {
             const clienteEnCola = colaSyS.shift()!
             empleadosSySLibres--
             clientesAtendidosSyS++
+            const nuevoServidorIndex = estadoServidoresSyS.findIndex(
+              (estado) => estado === "L"
+            )
+            if (nuevoServidorIndex !== -1) {
+              estadoServidoresSyS[nuevoServidorIndex] = "O"
+              finAtencionSyS[nuevoServidorIndex] =
+                tiempoSimulacion + tiempoVentaSyS
+            }
             tiempoEsperaSyS += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion SyS",
@@ -510,10 +994,27 @@ export function simulacionCorreo(
           empleadosEmpresarialLibres++
           tiempoOcupadosEmpresarial += tiempoAtencionRealizado
 
+          const servidorLiberadoEmpresarial = finAtencionEmpresarial.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoEmpresarial !== -1) {
+            estadoServidoresEmpresarial[servidorLiberadoEmpresarial] = "L"
+            finAtencionEmpresarial[servidorLiberadoEmpresarial] = 0
+          }
+
           if (colaEmpresarialAltaPrioridad.length > 0) {
             const clienteEnCola = colaEmpresarialAltaPrioridad.shift()!
             empleadosEmpresarialLibres--
             clientesAtendidosEmpresarialAltaPrioridad++
+
+            const servidorIndex = estadoServidoresEmpresarial.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresEmpresarial[servidorIndex] = "O"
+              finAtencionEmpresarial[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionEmpresarial
+            }
             tiempoEsperaEmpresarialAltaPrioridad +=
               tiempoSimulacion - clienteEnCola.horario
             eventos.push({
@@ -526,6 +1027,16 @@ export function simulacionCorreo(
               const clienteEnCola = colaEmpresarialBajaPrioridad.shift()!
               empleadosEmpresarialLibres--
               clientesAtendidosEmpresarialBajaPrioridad++
+
+              const servidorIndex = estadoServidoresEmpresarial.findIndex(
+                (estado) => estado === "L"
+              )
+              if (servidorIndex !== -1) {
+                estadoServidoresEmpresarial[servidorIndex] = "O"
+                finAtencionEmpresarial[servidorIndex] =
+                  tiempoSimulacion + tiempoAtencionEmpresarial
+              }
+
               tiempoEsperaEmpresarialBajaPrioridad +=
                 tiempoSimulacion - clienteEnCola.horario
               eventos.push({
@@ -539,11 +1050,28 @@ export function simulacionCorreo(
         case "PyES":
           empleadosPyESLibres++
           tiempoOcupadosPyES += tiempoAtencionRealizado
+          const servidorLiberadoPyES = finAtencionPyES.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoPyES !== -1) {
+            estadoServidoresPyES[servidorLiberadoPyES] = "L"
+            finAtencionPyES[servidorLiberadoPyES] = 0
+          }
 
           if (colaPyES.length > 0) {
             const clienteEnCola = colaPyES.shift()!
             empleadosPyESLibres--
             clientesAtendidosPyES++
+
+            const servidorIndex = estadoServidoresPyES.findIndex(
+              (estado) => estado === "L"
+            )
+            if (servidorIndex !== -1) {
+              estadoServidoresPyES[servidorIndex] = "O"
+              finAtencionPyES[servidorIndex] =
+                tiempoSimulacion + tiempoAtencionPyES
+            }
+
             tiempoEsperaPyES += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion PyES",
@@ -561,10 +1089,25 @@ export function simulacionCorreo(
         case "Nuevo":
           empleadosNuevoServicioLibres++
           tiempoOcupadoNuevoServicio += tiempoAtencionRealizado
+          const servidorLiberadoNuevo = finAtencionNuevoServicio.findIndex(
+            (tiempo) => Math.abs(tiempo - tiempoSimulacion) < 0.0001
+          )
+          if (servidorLiberadoNuevo !== -1) {
+            estadoServidoresNuevoServicio[servidorLiberadoNuevo] = "L"
+            finAtencionNuevoServicio[servidorLiberadoNuevo] = 0
+          }
           if (colaNuevoServicio.length > 0) {
             const clienteEnCola = colaNuevoServicio.shift()!
             empleadosNuevoServicioLibres--
             clientesAtendidosNuevoServicio++
+            const nuevoServidorIndex = estadoServidoresNuevoServicio.findIndex(
+              (estado) => estado === "L"
+            )
+            if (nuevoServidorIndex !== -1) {
+              estadoServidoresNuevoServicio[nuevoServidorIndex] = "O"
+              finAtencionNuevoServicio[nuevoServidorIndex] =
+                tiempoSimulacion + nuevoServicio.tiempoAtencion
+            }
             tiempoEsperaNuevoServicio +=
               tiempoSimulacion - clienteEnCola.horario
             eventos.push({
@@ -613,7 +1156,57 @@ export function simulacionCorreo(
         })
       }
     }
-  }
+    // Al final del bucle while, ANTES del cierre del while:
+    // Capturar vector de estado si está en el rango
+    if (
+      iteracionActual >= iteracionAMostrarPrimero &&
+      iteracionActual <= iteracionFinal
+    ) {
+      const vectorEstado = crearVectorEstado(
+        iteracionActual,
+        siguienteEvento.nombre,
+        tiempoSimulacion
+      )
+
+      // Actualizar datos específicos del evento actual
+      const [accion, , servicio] = siguienteEvento.nombre.split(" ")
+
+      // Actualizar datos de llegada para TODOS los servicios (no solo el del evento actual)
+      vectorEstado.EnvioPaquetes.LlegadaCliente.tiempo =
+        proximaLlegadaEnvioPaquetes
+      vectorEstado.EnvioPaquetes.LlegadaCliente.llegada =
+        eventos.find((e) => e.nombre === "Llegada Cliente EnvioPaquetes")
+          ?.horario || 0
+
+      vectorEstado.RyD.LlegadaCliente.tiempo = proximaLlegadaRyD
+      vectorEstado.RyD.LlegadaCliente.llegada =
+        eventos.find((e) => e.nombre === "Llegada Cliente RyD")?.horario || 0
+
+      vectorEstado.SyS.LlegadaCliente.tiempo = proximaLlegadaSyS
+      vectorEstado.SyS.LlegadaCliente.llegada =
+        eventos.find((e) => e.nombre === "Llegada Cliente SyS")?.horario || 0
+
+      vectorEstado.Empresarial.LlegadaCliente.tiempo = proximaLlegadaEmpresarial
+      vectorEstado.Empresarial.LlegadaCliente.llegada =
+        eventos.find((e) => e.nombre === "Llegada Cliente Empresarial")
+          ?.horario || 0
+
+      vectorEstado.PyES.LlegadaCliente.tiempo = proximaLlegadaPyES
+      vectorEstado.PyES.LlegadaCliente.llegada =
+        eventos.find((e) => e.nombre === "Llegada Cliente PyES")?.horario || 0
+
+      // Para el nuevo servicio si está habilitado
+      if (nuevoServicio.habilitado && vectorEstado.ServicioEspecial) {
+        vectorEstado.ServicioEspecial.LlegadaCliente.tiempo =
+          proximaLlegadaNuevoServicio
+        vectorEstado.ServicioEspecial.LlegadaCliente.llegada =
+          eventos.find((e) => e.nombre === "Llegada Servicio Nuevo")?.horario ||
+          0
+      }
+
+      vectorEstados.push(vectorEstado)
+    }
+  } // Cierre del while
 
   actualizarAreaColaEnvioPaquetes(tiempoSimulacion)
 
@@ -729,12 +1322,14 @@ export function simulacionCorreo(
     ),
   }
 
-  return resultados
+  return { resultados, vectorEstados }
 }
 
 // Ejemplo de uso
-const resultados = simulacionCorreo(
+const simulacion = simulacionCorreo(
   100000, // Número de iteraciones
+  100, // Iteración a mostrar primero
+  5, // Cantidad de iteraciones a mostrar
   {
     tiempoAtencionEnvioPaquetes: 1 / 10,
     tiempoAtencionRyD: 1 / 7,
@@ -776,14 +1371,19 @@ const resultados = simulacionCorreo(
   true
 )
 
-console.log("Promedios de espera:", resultados.promediosEspera)
-console.log("Promedios de ocupación:", resultados.promediosOcupacion)
-console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
-console.log(
-  "Probabilidad de clientes atendidos en más de 15 minutos:",
-  resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
-)
-console.log(
-  "Promedio de gente en cola Envio Paquetes:",
-  resultados.promedioGenteEnColaEnvioPaquetes
-)
+const resultados = simulacion.resultados
+const vectorEstados = simulacion.vectorEstados
+
+// console.log("Promedios de espera:", resultados.promediosEspera)
+// console.log("Promedios de ocupación:", resultados.promediosOcupacion)
+// console.log("Cantidad máxima en cola:", resultados.cantidadMaximaEnCola)
+// console.log(
+//   "Probabilidad de clientes atendidos en más de 15 minutos:",
+//   resultados.probabilidadClientesPaquetesAtendidosEnMasDe15
+// )
+// console.log(
+//   "Promedio de gente en cola Envio Paquetes:",
+//   resultados.promedioGenteEnColaEnvioPaquetes
+// )
+
+// console.log("Vector de estados:", vectorEstados)

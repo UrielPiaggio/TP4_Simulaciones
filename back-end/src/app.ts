@@ -1,5 +1,6 @@
 import { serve } from "bun"
 import { uniforme, exponencial, normal, poisson } from "./distribuciones"
+import { simulacionCorreo } from "."
 
 const PORT = 8080
 
@@ -187,6 +188,81 @@ const server = serve({
           { error: (error as Error).message },
           { status: 400 }
         )
+      }
+    },
+
+    "/api/simulacion": async (request) => {
+      POST: {
+        try {
+          const body = await request.json()
+
+          // Validación básica de parámetros requeridos
+          const camposRequeridos = [
+            "numeroIteraciones",
+            "iteracionAMostrarPrimero",
+            "cantidadDeFilasAMostrar",
+            "tiemposAtencion",
+            "tiemposLlegada",
+            "empleados",
+            "ausenciaEmpleadoEmpresarial",
+            "nuevoServicio",
+            "prioridadEnEmpresarial",
+          ]
+
+          const camposFaltantes = camposRequeridos.filter(
+            (campo) => !(campo in body)
+          )
+          if (camposFaltantes.length > 0) {
+            return new Response(
+              JSON.stringify({
+                error: "Parámetros faltantes",
+                camposFaltantes: camposFaltantes,
+              }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              }
+            )
+          }
+
+          // Ejecutar simulación
+          const resultado = simulacionCorreo(
+            body.numeroIteraciones,
+            body.iteracionAMostrarPrimero,
+            body.cantidadDeFilasAMostrar,
+            body.tiemposAtencion,
+            body.tiemposLlegada,
+            body.empleados,
+            body.ausenciaEmpleadoEmpresarial,
+            body.nuevoServicio,
+            body.prioridadEnEmpresarial
+          )
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              resultados: resultado,
+              vectorEstados: resultado.vectorEstados || [],
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+        } catch (error) {
+          console.error("Error en simulación:", error)
+          return new Response(
+            JSON.stringify({
+              error: "Error interno del servidor",
+              mensaje:
+                error instanceof Error ? error.message : "Error desconocido",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+        }
       }
     },
 
