@@ -4,12 +4,44 @@ import { simulacionCorreo } from "."
 
 const PORT = 8080
 
+// CORS headers helper function
+const addCorsHeaders = (response: Response): Response => {
+  response.headers.set("Access-Control-Allow-Origin", "*")
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  )
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  )
+  response.headers.set("Access-Control-Max-Age", "86400")
+  return response
+}
+
+// Helper function to create JSON response with CORS
+const corsJsonResponse = (data: any, init?: ResponseInit): Response => {
+  const response = Response.json(data, init)
+  return addCorsHeaders(response)
+}
+
 const server = serve({
   port: PORT,
-  routes: {
-    // Endpoint de información general
-    "/api": () =>
-      Response.json({
+
+  // Handle preflight requests
+  fetch(request) {
+    if (request.method === "OPTIONS") {
+      const response = new Response(null, { status: 200 })
+      return addCorsHeaders(response)
+    }
+
+    // Handle routes
+    const url = new URL(request.url)
+    const pathname = url.pathname
+
+    // Route handlers
+    if (pathname === "/api") {
+      return corsJsonResponse({
         message: "API de Distribuciones de Probabilidad",
         endpoints: {
           "GET /api/uniforme": {
@@ -36,12 +68,11 @@ const server = serve({
             parameters: ["media", "numeroAleatorio"],
           },
         },
-      }),
+      })
+    }
 
-    // Endpoints para cada distribución
-    "/api/uniforme": async (request) => {
+    if (pathname === "/api/uniforme") {
       try {
-        const url = new URL(request.url)
         const limiteInferior = parseFloat(
           url.searchParams.get("limiteInferior") || ""
         )
@@ -57,7 +88,7 @@ const server = serve({
           isNaN(limiteSuperior) ||
           isNaN(numeroAleatorio)
         ) {
-          return Response.json(
+          return corsJsonResponse(
             {
               error:
                 "limiteInferior, limiteSuperior y numeroAleatorio deben ser números válidos",
@@ -67,51 +98,49 @@ const server = serve({
         }
 
         const result = uniforme(limiteInferior, limiteSuperior, numeroAleatorio)
-        return Response.json({
+        return corsJsonResponse({
           result,
           distribution: "uniforme",
           parameters: { limiteInferior, limiteSuperior, numeroAleatorio },
         })
       } catch (error) {
-        return Response.json(
+        return corsJsonResponse(
           { error: (error as Error).message },
           { status: 400 }
         )
       }
-    },
+    }
 
-    "/api/exponencial": async (request) => {
+    if (pathname === "/api/exponencial") {
       try {
-        const url = new URL(request.url)
         const media = parseFloat(url.searchParams.get("media") || "")
         const numeroAleatorio = parseFloat(
           url.searchParams.get("numeroAleatorio") || ""
         )
 
         if (isNaN(media) || isNaN(numeroAleatorio)) {
-          return Response.json(
+          return corsJsonResponse(
             { error: "media y numeroAleatorio deben ser números válidos" },
             { status: 400 }
           )
         }
 
         const result = exponencial(media, numeroAleatorio)
-        return Response.json({
+        return corsJsonResponse({
           result,
           distribution: "exponencial",
           parameters: { media, numeroAleatorio },
         })
       } catch (error) {
-        return Response.json(
+        return corsJsonResponse(
           { error: (error as Error).message },
           { status: 400 }
         )
       }
-    },
+    }
 
-    "/api/normal": async (request) => {
+    if (pathname === "/api/normal") {
       try {
-        const url = new URL(request.url)
         const media = parseFloat(url.searchParams.get("media") || "")
         const desviacionEstandar = parseFloat(
           url.searchParams.get("desviacionEstandar") || ""
@@ -129,7 +158,7 @@ const server = serve({
           isNaN(numeroAleatorio1) ||
           isNaN(numeroAleatorio2)
         ) {
-          return Response.json(
+          return corsJsonResponse(
             {
               error:
                 "media, desviacionEstandar, numeroAleatorio1 y numeroAleatorio2 deben ser números válidos",
@@ -144,7 +173,7 @@ const server = serve({
           numeroAleatorio1,
           numeroAleatorio2
         )
-        return Response.json({
+        return corsJsonResponse({
           result,
           distribution: "normal",
           parameters: {
@@ -155,44 +184,43 @@ const server = serve({
           },
         })
       } catch (error) {
-        return Response.json(
+        return corsJsonResponse(
           { error: (error as Error).message },
           { status: 400 }
         )
       }
-    },
+    }
 
-    "/api/poisson": async (request) => {
+    if (pathname === "/api/poisson") {
       try {
-        const url = new URL(request.url)
         const media = parseFloat(url.searchParams.get("media") || "")
         const numeroAleatorio = parseFloat(
           url.searchParams.get("numeroAleatorio") || ""
         )
 
         if (isNaN(media) || isNaN(numeroAleatorio)) {
-          return Response.json(
+          return corsJsonResponse(
             { error: "media y numeroAleatorio deben ser números válidos" },
             { status: 400 }
           )
         }
 
         const result = poisson(media, numeroAleatorio)
-        return Response.json({
+        return corsJsonResponse({
           result,
           distribution: "poisson",
           parameters: { media, numeroAleatorio },
         })
       } catch (error) {
-        return Response.json(
+        return corsJsonResponse(
           { error: (error as Error).message },
           { status: 400 }
         )
       }
-    },
+    }
 
-    "/api/simulacion": async (request) => {
-      POST: {
+    if (pathname === "/api/simulacion" && request.method === "POST") {
+      return (async () => {
         try {
           const body = await request.json()
 
@@ -213,7 +241,7 @@ const server = serve({
             (campo) => !(campo in body)
           )
           if (camposFaltantes.length > 0) {
-            return new Response(
+            const response = new Response(
               JSON.stringify({
                 error: "Parámetros faltantes",
                 camposFaltantes: camposFaltantes,
@@ -223,6 +251,7 @@ const server = serve({
                 headers: { "Content-Type": "application/json" },
               }
             )
+            return addCorsHeaders(response)
           }
 
           // Ejecutar simulación
@@ -238,7 +267,7 @@ const server = serve({
             body.prioridadEnEmpresarial
           )
 
-          return new Response(
+          const response = new Response(
             JSON.stringify({
               success: true,
               resultados: resultado,
@@ -249,9 +278,10 @@ const server = serve({
               headers: { "Content-Type": "application/json" },
             }
           )
+          return addCorsHeaders(response)
         } catch (error) {
           console.error("Error en simulación:", error)
-          return new Response(
+          const response = new Response(
             JSON.stringify({
               error: "Error interno del servidor",
               mensaje:
@@ -262,30 +292,31 @@ const server = serve({
               headers: { "Content-Type": "application/json" },
             }
           )
+          return addCorsHeaders(response)
         }
-      }
-    },
+      })()
+    }
 
-    "/": () =>
-      Response.json({
+    if (pathname === "/") {
+      return corsJsonResponse({
         message: "Servidor de Distribuciones de Probabilidad",
         apiInfo:
           "Visita /api para más información sobre los endpoints disponibles",
-      }),
-  },
+      })
+    }
 
-  // Fallback para rutas no encontradas
-  fetch() {
-    return Response.json({ message: "Not Found" }, { status: 404 })
+    // Fallback for not found routes
+    return corsJsonResponse({ message: "Not Found" }, { status: 404 })
   },
 
   // Fallback para errores
   error(error) {
     console.error(error)
-    return Response.json(
+    const response = Response.json(
       { message: `Internal Error: ${error.message}` },
       { status: 500 }
     )
+    return addCorsHeaders(response)
   },
 })
 
@@ -296,3 +327,5 @@ console.log(`   GET  /api/uniforme - Distribución uniforme`)
 console.log(`   GET  /api/exponencial - Distribución exponencial`)
 console.log(`   GET  /api/normal - Distribución normal`)
 console.log(`   GET  /api/poisson - Distribución de Poisson`)
+console.log(`   POST /api/simulacion - Simulación de correo`)
+console.log(`🌐 CORS enabled for all origins`)
