@@ -34,8 +34,8 @@ export const DefVariables = ({
     CantiSerTS5: 1,
     TasaLlegadaTS5: 3,
     // Configuración de tabla
-    CantidadFilaAMostrar: 10,
-    DesdeFilaAMostrar: 10,
+    CantidadFilaAMostrar: 300,
+    DesdeFilaAMostrar: 1,
     // Configuraciones especiales
     AusenciaEmpleadoEmpresarial: false,
     NuevoServicioPostEntrega: true,
