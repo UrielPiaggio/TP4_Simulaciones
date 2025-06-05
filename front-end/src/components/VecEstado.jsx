@@ -1,53 +1,88 @@
 import React from "react"
+import { Spinner, Alert, Table } from "react-bootstrap"
 
-export default function VecEstado() {
+export default function VecEstado({ simulationData, vectorEstados, isLoading, error }) {
+  // Mostrar estado de carga
+  if (isLoading) {
+    return (
+      <div className="text-center p-4">
+        <Spinner animation="border" role="status" variant="primary">
+          <span className="visually-hidden">Cargando vector de estado...</span>
+        </Spinner>
+        <div className="mt-3">
+          <p>Generando vector de estado...</p>
+          <small className="text-muted">Esto puede tomar unos momentos</small>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si existe
+  if (error) {
+    return (
+      <Alert variant="danger">
+        <Alert.Heading>Error al generar vector de estado</Alert.Heading>
+        <p>{error}</p>
+      </Alert>
+    );
+  }
+
+  // Si no hay datos de vectores de estado, mostrar mensaje
+  if (!vectorEstados || vectorEstados.length === 0) {
+    return (
+      <div className="text-center p-4">
+        <div className="mb-3" style={{ fontSize: "3rem" }}>📊</div>
+        <h5>No hay vector de estado disponible</h5>
+        <p className="text-muted">Configure los parámetros y ejecute la simulación para ver el vector de estado.</p>
+      </div>
+    );
+  }
+
   const tipoServicio = [
     {
       nombre: "Envío de Paquetes",
-      servidores: 3,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
+      key: "EnvioPaquetes",
+      servidores: simulationData?.empleados?.empleadosEnvioPaquetes || 3,
     },
     {
-      nombre: "Reclamos y Devoluciones",
-      servidores: 2,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
+      nombre: "Reclamos y Devoluciones", 
+      key: "RyD",
+      servidores: simulationData?.empleados?.empleadosRyD || 2,
     },
     {
       nombre: "Venta de Sellos y Sobres",
-      servidores: 3,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
+      key: "SyS",
+      servidores: simulationData?.empleados?.empleadosSyS || 3,
     },
     {
       nombre: "Atención Empresarial",
-      servidores: 2,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
+      key: "Empresarial",
+      servidores: simulationData?.empleados?.empleadosEmpresarial || 2,
     },
     {
       nombre: "Postales y Envíos Especiales",
-      servidores: 1,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
+      key: "PyES",
+      servidores: simulationData?.empleados?.empleadosPyES || 1,
     },
-    {
+  ];
+
+  // Agregar servicio post-entrega si está habilitado
+  if (simulationData?.nuevoServicio?.habilitado) {
+    tipoServicio.push({
       nombre: "Servicio Post Despacho Paquetes",
-      servidores: 1,
-      cola: 1,
-      tiempoEsperaPromedio: 0,
-      porcentajeOcupacion: 0,
-    },
-  ]
+      key: "ServicioEspecial",
+      servidores: simulationData?.nuevoServicio?.numeroEmpleados || 2,
+    });
+  }
 
   return (
     <div className="overflow-x-auto p-4">
+      <div className="mb-3">
+        <small className="text-muted">
+          Mostrando {vectorEstados.length} filas del vector de estado
+        </small>
+      </div>
+      
       <table className="border-collapse border border-black w-full text-center text-sm">
         <thead>
           {/* Fila 1: Columnas fijas + nombre del servicio */}
@@ -163,63 +198,99 @@ export default function VecEstado() {
         </thead>
 
         <tbody>
-          <tr>
-            {/* Columnas fijas */}
-            <td className="border px-4 py-2">1</td>
-            <td className="border px-4 py-2">Inicializacion</td>
-            <td className="border px-4 py-2">10.25</td>
+          {vectorEstados.map((fila, filaIndex) => (
+            <tr key={filaIndex}>
+              {/* Columnas fijas */}
+              <td className="border px-4 py-2">{fila.numeroIteracion || filaIndex + 1}</td>
+              <td className="border px-4 py-2">{fila.evento || "Simulación"}</td>
+              <td className="border px-4 py-2">{fila.horario?.toFixed(4) || "0.0000"}</td>
 
-            {/* Columnas dinámicas por servicio */}
-            {tipoServicio.map((servicio, index) => {
-              const finAtencionCeldas = Array.from(
-                { length: servicio.servidores },
-                (_, i) => (
-                  <td key={`fa-${index}-${i}`} className="border px-2 py-1">
-                    --
-                  </td>
-                )
-              )
+              {/* Columnas dinámicas por servicio */}
+              {tipoServicio.map((servicio, servicioIndex) => {
+                const datosServicio = fila[servicio.key] || {};
+                
+                // Extraer datos de llegada
+                const llegada = datosServicio.LlegadaCliente || {};
+                
+                // Extraer datos de fin de atención
+                const finAtencion = datosServicio.FinAtencion || {};
+                
+                // Extraer estado de servidores
+                const estadoServidores = datosServicio.EstadoServidores || {};
+                
+                // Extraer métricas
+                const metricas = datosServicio.Metricas || {};
 
-              const estadoServidoresCeldas = Array.from(
-                { length: servicio.servidores },
-                (_, i) => (
-                  <td key={`es-${index}-${i}`} className="border px-2 py-1">
-                    Libre
-                  </td>
-                )
-              )
+                const finAtencionCeldas = Array.from(
+                  { length: servicio.servidores },
+                  (_, i) => (
+                    <td key={`fa-${servicioIndex}-${i}`} className="border px-2 py-1">
+                      {finAtencion[`FinAtencion${i + 1}`] ? finAtencion[`FinAtencion${i + 1}`].toFixed(4) : "0.0000"}
+                    </td>
+                  )
+                );
 
-              return (
-                <React.Fragment key={index}>
-                  {/* Llegada Cliente */}
-                  <td className="border px-2 py-1">0.12</td>
-                  <td className="border px-2 py-1">2.00</td>
-                  <td className="border px-2 py-1">12.25</td>
+                const estadoServidoresCeldas = Array.from(
+                  { length: servicio.servidores },
+                  (_, i) => (
+                    <td key={`es-${servicioIndex}-${i}`} className="border px-2 py-1">
+                      {estadoServidores[`Servidor${i + 1}`] === "O" ? "Ocupado" : "Libre"}
+                    </td>
+                  )
+                );
 
-                  {/* Fin de Atención */}
-                  <td className="border px-2 py-1">0.65</td>
-                  <td className="border px-2 py-1">3.00</td>
-                  {finAtencionCeldas}
+                return (
+                  <React.Fragment key={servicioIndex}>
+                    {/* Llegada Cliente */}
+                    <td className="border px-2 py-1">
+                      {llegada.RND?.toFixed(4) || "0.0000"}
+                    </td>
+                    <td className="border px-2 py-1">
+                      {llegada.tiempo?.toFixed(4) || "0.0000"}
+                    </td>
+                    <td className="border px-2 py-1">
+                      {llegada.llegada?.toFixed(4) || "0.0000"}
+                    </td>
 
-                  {/* Cola */}
-                  <td className="border px-2 py-1">1</td>
+                    {/* Fin de Atención */}
+                    <td className="border px-2 py-1">
+                      {finAtencion.RND?.toFixed(4) || "0.0000"}
+                    </td>
+                    <td className="border px-2 py-1">
+                      {finAtencion.tiempo?.toFixed(4) || "0.0000"}
+                    </td>
+                    {finAtencionCeldas}
 
-                  {/* Estado Servidores */}
-                  {estadoServidoresCeldas}
+                    {/* Cola */}
+                    <td className="border px-2 py-1">
+                      {datosServicio.Cola || 0}
+                    </td>
 
-                  {/* Atributos adicionales */}
-                  <td className="border px-2 py-1">
-                    {servicio.tiempoEsperaPromedio}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {servicio.porcentajeOcupacion}
-                  </td>
-                </React.Fragment>
-              )
-            })}
-          </tr>
+                    {/* Estado Servidores */}
+                    {estadoServidoresCeldas}
+
+                    {/* Métricas */}
+                    <td className="border px-2 py-1">
+                      {metricas.esperaPromedio?.toFixed(4) || "0.0000"}
+                    </td>
+                    <td className="border px-2 py-1">
+                      {metricas.porcentajeOcupacion?.toFixed(2) || "0.00"}%
+                    </td>
+                  </React.Fragment>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
+
+      {/* Información adicional */}
+      <div className="mt-3">
+        <small className="text-muted">
+          <strong>💡 Información:</strong> El vector de estado muestra el estado del sistema en cada iteración de la simulación.
+          Los datos mostrados incluyen tiempos de llegada, atención, estado de servidores y métricas calculadas.
+        </small>
+      </div>
     </div>
-  )
+  );
 }
