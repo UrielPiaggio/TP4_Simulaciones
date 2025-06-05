@@ -68,6 +68,7 @@ export default function VecEstado({
       nombre: "Atención Empresarial",
       key: "Empresarial",
       servidores: simulationData?.empleados?.empleadosEmpresarial || 2,
+      tienePrioridad: simulationData?.prioridadEnEmpresarial || false,
     },
     {
       nombre: "Postales y Envíos Especiales",
@@ -113,10 +114,9 @@ export default function VecEstado({
             {/* Servicios */}
             {tipoServicio.map((servicio, index) => {
               const colSpan =
-                3 + // Llegada Cliente
-                2 +
-                servicio.servidores + // Fin de Atención
-                1 + // Cola
+                (servicio.key === "ServicioEspecial" ? 1 : 3) + // Llegada Cliente (1 para servicio especial, 3 para otros)
+                servicio.servidores + // Fin de Atención (solo servidores, sin columna tiempo)
+                (servicio.tienePrioridad ? 2 : 1) + // Cola (una o dos según prioridad)
                 servicio.servidores + // Estado Servidores
                 2 // Nuevas columnas: Tiempo Espera y Porcentaje Ocupación
               return (
@@ -136,20 +136,25 @@ export default function VecEstado({
             {tipoServicio.map((servicio, index) => (
               <React.Fragment key={index}>
                 <th
-                  colSpan={3}
+                  colSpan={servicio.key === "ServicioEspecial" ? 1 : 3}
                   className="border px-2 py-1"
                   style={{ backgroundColor: "#FFD700" }}
                 >
                   Llegada Cliente
                 </th>
                 <th
-                  colSpan={2 + servicio.servidores}
+                  colSpan={servicio.servidores}
                   className="border px-2 py-1"
                   style={{ backgroundColor: "#98FF98" }}
                 >
                   Fin de Atención
                 </th>
-                <th className="border px-2 py-1">Cola</th>
+                <th 
+                  colSpan={servicio.tienePrioridad ? 2 : 1}
+                  className="border px-2 py-1"
+                >
+                  {servicio.tienePrioridad ? "Colas" : "Cola"}
+                </th>
                 <th
                   colSpan={servicio.servidores}
                   className="border px-2 py-1"
@@ -173,13 +178,17 @@ export default function VecEstado({
             {tipoServicio.map((servicio, index) => (
               <React.Fragment key={index}>
                 {/* Llegada Cliente */}
-                <th className="border px-3 py-1 bg-yellow-50">RND</th>
-                <th className="border px-3 py-1 bg-yellow-50">Tiempo</th>
-                <th className="border px-3 py-1 bg-yellow-50">Llegada</th>
+                {servicio.key === "ServicioEspecial" ? (
+                  <th className="border px-3 py-1 bg-yellow-50">Llegada</th>
+                ) : (
+                  <>
+                    <th className="border px-3 py-1 bg-yellow-50">RND</th>
+                    <th className="border px-3 py-1 bg-yellow-50">Tiempo</th>
+                    <th className="border px-3 py-1 bg-yellow-50">Llegada</th>
+                  </>
+                )}
 
                 {/* Fin de Atención */}
-                <th className="border px-3 py-1 bg-green-50">RND</th>
-                <th className="border px-3 py-1 bg-green-50">Tiempo</th>
                 {Array.from({ length: servicio.servidores }, (_, i) => (
                   <th
                     key={`fin-${index}-${i}`}
@@ -189,8 +198,15 @@ export default function VecEstado({
                   </th>
                 ))}
 
-                {/* Cola */}
-                <th className="border px-3 py-1 bg-blue-50">Cola</th>
+                {/* Cola(s) */}
+                {servicio.tienePrioridad ? (
+                  <>
+                    <th className="border px-3 py-1 bg-blue-50">Cola Alta Prioridad</th>
+                    <th className="border px-3 py-1 bg-blue-50">Cola Baja Prioridad</th>
+                  </>
+                ) : (
+                  <th className="border px-3 py-1 bg-blue-50">Cola</th>
+                )}
 
                 {/* Estado de cada servidor */}
                 {Array.from({ length: servicio.servidores }, (_, i) => (
@@ -270,29 +286,42 @@ export default function VecEstado({
                 return (
                   <React.Fragment key={servicioIndex}>
                     {/* Llegada Cliente */}
-                    <td className="border px-2 py-1">
-                      {llegada.RND?.toFixed(4) || "0.0000"}
-                    </td>
-                    <td className="border px-2 py-1">
-                      {llegada.tiempo?.toFixed(4) || "0.0000"}
-                    </td>
-                    <td className="border px-2 py-1">
-                      {llegada.llegada?.toFixed(4) || "0.0000"}
-                    </td>
+                    {servicio.key === "ServicioEspecial" ? (
+                      <td className="border px-2 py-1">
+                        {llegada.llegada?.toFixed(4) || "0.0000"}
+                      </td>
+                    ) : (
+                      <>
+                        <td className="border px-2 py-1">
+                          {llegada.RND?.toFixed(4) || "0.0000"}
+                        </td>
+                        <td className="border px-2 py-1">
+                          {llegada.tiempo?.toFixed(4) || "0.0000"}
+                        </td>
+                        <td className="border px-2 py-1">
+                          {llegada.llegada?.toFixed(4) || "0.0000"}
+                        </td>
+                      </>
+                    )}
 
                     {/* Fin de Atención */}
-                    <td className="border px-2 py-1">
-                      {finAtencion.RND?.toFixed(4) || "0.0000"}
-                    </td>
-                    <td className="border px-2 py-1">
-                      {finAtencion.tiempo?.toFixed(4) || "0.0000"}
-                    </td>
                     {finAtencionCeldas}
 
-                    {/* Cola */}
-                    <td className="border px-2 py-1">
-                      {datosServicio.Cola || 0}
-                    </td>
+                                {/* Cola(s) */}
+                    {servicio.tienePrioridad ? (
+                      <>
+                        <td className="border px-2 py-1">
+                          {datosServicio.ColaAltaPrioridad || 0}
+                        </td>
+                        <td className="border px-2 py-1">
+                          {datosServicio.ColaBajaPrioridad || 0}
+                        </td>
+                      </>
+                    ) : (
+                      <td className="border px-2 py-1">
+                        {datosServicio.Cola || 0}
+                      </td>
+                    )}
 
                     {/* Estado Servidores */}
                     {estadoServidoresCeldas}

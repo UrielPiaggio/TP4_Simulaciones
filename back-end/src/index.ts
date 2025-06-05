@@ -150,7 +150,9 @@ export type VectorEstado = {
       FinAtencion1: number
       FinAtencion2: number
     }
-    Cola: number
+    Cola?: number
+    ColaAltaPrioridad?: number
+    ColaBajaPrioridad?: number
     EstadoServidores: {
       Servidor1: string
       Servidor2: string
@@ -483,10 +485,15 @@ export function simulacionCorreo(
           llegada: 0,
         },
         FinAtencion: crearFinAtencion(finAtencionEmpresarial),
-        Cola: prioridadEnEmpresarial
-          ? colaEmpresarialAltaPrioridad.length +
-            colaEmpresarialBajaPrioridad.length
-          : colaEmpresarialBajaPrioridad.length,
+        // Si hay prioridad empresarial, mostrar colas separadas
+        ...(prioridadEnEmpresarial
+          ? {
+              ColaAltaPrioridad: colaEmpresarialAltaPrioridad.length,
+              ColaBajaPrioridad: colaEmpresarialBajaPrioridad.length,
+            }
+          : {
+              Cola: colaEmpresarialBajaPrioridad.length,
+            }),
         EstadoServidores: crearEstadoServidores(estadoServidoresEmpresarial),
         Metricas: {
           esperaPromedio:
