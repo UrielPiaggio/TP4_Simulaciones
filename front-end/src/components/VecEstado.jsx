@@ -1,7 +1,12 @@
 import React from "react"
 import { Spinner, Alert, Table } from "react-bootstrap"
 
-export default function VecEstado({ simulationData, vectorEstados, isLoading, error }) {
+export default function VecEstado({
+  simulationData,
+  vectorEstados,
+  isLoading,
+  error,
+}) {
   // Mostrar estado de carga
   if (isLoading) {
     return (
@@ -14,7 +19,7 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
           <small className="text-muted">Esto puede tomar unos momentos</small>
         </div>
       </div>
-    );
+    )
   }
 
   // Mostrar error si existe
@@ -24,18 +29,23 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
         <Alert.Heading>Error al generar vector de estado</Alert.Heading>
         <p>{error}</p>
       </Alert>
-    );
+    )
   }
 
   // Si no hay datos de vectores de estado, mostrar mensaje
   if (!vectorEstados || vectorEstados.length === 0) {
     return (
       <div className="text-center p-4">
-        <div className="mb-3" style={{ fontSize: "3rem" }}>📊</div>
+        <div className="mb-3" style={{ fontSize: "3rem" }}>
+          📊
+        </div>
         <h5>No hay vector de estado disponible</h5>
-        <p className="text-muted">Configure los parámetros y ejecute la simulación para ver el vector de estado.</p>
+        <p className="text-muted">
+          Configure los parámetros y ejecute la simulación para ver el vector de
+          estado.
+        </p>
       </div>
-    );
+    )
   }
 
   const tipoServicio = [
@@ -45,7 +55,7 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
       servidores: simulationData?.empleados?.empleadosEnvioPaquetes || 3,
     },
     {
-      nombre: "Reclamos y Devoluciones", 
+      nombre: "Reclamos y Devoluciones",
       key: "RyD",
       servidores: simulationData?.empleados?.empleadosRyD || 2,
     },
@@ -64,7 +74,7 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
       key: "PyES",
       servidores: simulationData?.empleados?.empleadosPyES || 1,
     },
-  ];
+  ]
 
   // Agregar servicio post-entrega si está habilitado
   if (simulationData?.nuevoServicio?.habilitado) {
@@ -72,18 +82,21 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
       nombre: "Servicio Post Despacho Paquetes",
       key: "ServicioEspecial",
       servidores: simulationData?.nuevoServicio?.numeroEmpleados || 2,
-    });
+    })
   }
 
   return (
-    <div className="overflow-x-auto p-4">
+    <div
+      className="overflow-x-auto p-4"
+      style={{ maxHeight: "80vh", overflowY: "auto" }}
+    >
       <div className="mb-3">
         <small className="text-muted">
           Mostrando {vectorEstados.length} filas del vector de estado
         </small>
       </div>
-      
-      <table className="border-collapse border border-black w-full text-center text-sm">
+      <table className="border-collapse border border-black w-full text-center text-sm sticky-header-table">
+        {/* Añadido sticky-header-table */}
         <thead>
           {/* Fila 1: Columnas fijas + nombre del servicio */}
           <tr>
@@ -196,48 +209,63 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
             ))}
           </tr>
         </thead>
-
         <tbody>
           {vectorEstados.map((fila, filaIndex) => (
             <tr key={filaIndex}>
               {/* Columnas fijas */}
-              <td className="border px-4 py-2">{fila.numeroIteracion || filaIndex + 1}</td>
-              <td className="border px-4 py-2">{fila.evento || "Simulación"}</td>
-              <td className="border px-4 py-2">{fila.horario?.toFixed(4) || "0.0000"}</td>
+              <td className="border px-4 py-2">
+                {fila.numeroIteracion || filaIndex + 1}
+              </td>
+              <td className="border px-4 py-2">
+                {fila.evento || "Simulación"}
+              </td>
+              <td className="border px-4 py-2">
+                {fila.horario?.toFixed(4) || "0.0000"}
+              </td>
 
               {/* Columnas dinámicas por servicio */}
               {tipoServicio.map((servicio, servicioIndex) => {
-                const datosServicio = fila[servicio.key] || {};
-                
+                const datosServicio = fila[servicio.key] || {}
+
                 // Extraer datos de llegada
-                const llegada = datosServicio.LlegadaCliente || {};
-                
+                const llegada = datosServicio.LlegadaCliente || {}
+
                 // Extraer datos de fin de atención
-                const finAtencion = datosServicio.FinAtencion || {};
-                
+                const finAtencion = datosServicio.FinAtencion || {}
+
                 // Extraer estado de servidores
-                const estadoServidores = datosServicio.EstadoServidores || {};
-                
+                const estadoServidores = datosServicio.EstadoServidores || {}
+
                 // Extraer métricas
-                const metricas = datosServicio.Metricas || {};
+                const metricas = datosServicio.Metricas || {}
 
                 const finAtencionCeldas = Array.from(
                   { length: servicio.servidores },
                   (_, i) => (
-                    <td key={`fa-${servicioIndex}-${i}`} className="border px-2 py-1">
-                      {finAtencion[`FinAtencion${i + 1}`] ? finAtencion[`FinAtencion${i + 1}`].toFixed(4) : "0.0000"}
+                    <td
+                      key={`fa-${servicioIndex}-${i}`}
+                      className="border px-2 py-1"
+                    >
+                      {finAtencion[`FinAtencion${i + 1}`]
+                        ? finAtencion[`FinAtencion${i + 1}`].toFixed(4)
+                        : "0.0000"}
                     </td>
                   )
-                );
+                )
 
                 const estadoServidoresCeldas = Array.from(
                   { length: servicio.servidores },
                   (_, i) => (
-                    <td key={`es-${servicioIndex}-${i}`} className="border px-2 py-1">
-                      {estadoServidores[`Servidor${i + 1}`] === "O" ? "Ocupado" : "Libre"}
+                    <td
+                      key={`es-${servicioIndex}-${i}`}
+                      className="border px-2 py-1"
+                    >
+                      {estadoServidores[`Servidor${i + 1}`] === "O"
+                        ? "Ocupado"
+                        : "Libre"}
                     </td>
                   )
-                );
+                )
 
                 return (
                   <React.Fragment key={servicioIndex}>
@@ -277,20 +305,21 @@ export default function VecEstado({ simulationData, vectorEstados, isLoading, er
                       {metricas.porcentajeOcupacion?.toFixed(2) || "0.00"}%
                     </td>
                   </React.Fragment>
-                );
+                )
               })}
             </tr>
           ))}
         </tbody>
       </table>
-
       {/* Información adicional */}
       <div className="mt-3">
         <small className="text-muted">
-          <strong>💡 Información:</strong> El vector de estado muestra el estado del sistema en cada iteración de la simulación.
-          Los datos mostrados incluyen tiempos de llegada, atención, estado de servidores y métricas calculadas.
+          <strong>💡 Información:</strong> El vector de estado muestra el estado
+          del sistema en cada iteración de la simulación. Los datos mostrados
+          incluyen tiempos de llegada, atención, estado de servidores y métricas
+          calculadas.
         </small>
       </div>
     </div>
-  );
+  )
 }
