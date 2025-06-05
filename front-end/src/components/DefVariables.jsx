@@ -8,7 +8,12 @@ import Button from "react-bootstrap/Button"
 import { useState } from "react"
 import { postSimulationData } from "../../services/serviceSim"
 
-export const DefVariables = ({ onSendData, onSimulationResults, onSimulationError, onSimulationStart }) => {
+export const DefVariables = ({
+  onSendData,
+  onSimulationResults,
+  onSimulationError,
+  onSimulationStart,
+}) => {
   const [formDatos, setFormDatos] = useState({
     // Parámetros de simulación
     numeroIteraciones: 100000,
@@ -29,8 +34,8 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
     CantiSerTS5: 1,
     TasaLlegadaTS5: 3,
     // Configuración de tabla
-    CantidadFilaAMostrar: 10,
-    DesdeFilaAMostrar: 10,
+    CantidadFilaAMostrar: 300,
+    DesdeFilaAMostrar: 1,
     // Configuraciones especiales
     AusenciaEmpleadoEmpresarial: false,
     NuevoServicioPostEntrega: true,
@@ -57,7 +62,7 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     // Transformar los datos del formulario al formato esperado por el backend
     const backendData = {
       numeroIteraciones: formDatos.numeroIteraciones,
@@ -109,10 +114,10 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
     }
 
     onSendData(backendData)
-    
+
     // Iniciar simulación
     onSimulationStart()
-    
+
     try {
       const response = await postSimulationData(backendData)
       console.log("Datos enviados correctamente:", response)
@@ -179,8 +184,8 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
                   >
                     <Form.Control
                       type="number"
-                      name={`LlegadaCT${service.prefix}`}
-                      defaultValue={formDatos[`LlegadaCT${service.prefix}`]}
+                      name={`LlegadaC${service.prefix}`}
+                      defaultValue={formDatos[`LlegadaC${service.prefix}`]}
                       onChange={handleChange}
                       min="1"
                     />
@@ -259,9 +264,7 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
 
         {/* Configuración de simulación */}
         <div className="table-config-section">
-          <h5 className="config-title">
-            🔬 Configuración de Simulación
-          </h5>
+          <h5 className="config-title">🔬 Configuración de Simulación</h5>
           <Row className="g-3">
             <Col md={4}>
               <FloatingLabel
@@ -317,15 +320,17 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
           </h5>
           <Row className="g-4">
             <Col md={4}>
-              <div 
-                className="checkbox-card" 
-                onClick={() => handleCheckboxChange({
-                  target: {
-                    name: "AusenciaEmpleadoEmpresarial",
-                    checked: !formDatos.AusenciaEmpleadoEmpresarial
-                  }
-                })}
-                style={{ cursor: 'pointer' }}
+              <div
+                className="checkbox-card"
+                onClick={() =>
+                  handleCheckboxChange({
+                    target: {
+                      name: "AusenciaEmpleadoEmpresarial",
+                      checked: !formDatos.AusenciaEmpleadoEmpresarial,
+                    },
+                  })
+                }
+                style={{ cursor: "pointer" }}
               >
                 <Form.Check
                   type="checkbox"
@@ -346,15 +351,17 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
               </div>
             </Col>
             <Col md={4}>
-              <div 
-                className="checkbox-card" 
-                onClick={() => handleCheckboxChange({
-                  target: {
-                    name: "NuevoServicioPostEntrega",
-                    checked: !formDatos.NuevoServicioPostEntrega
-                  }
-                })}
-                style={{ cursor: 'pointer' }}
+              <div
+                className="checkbox-card"
+                onClick={() =>
+                  handleCheckboxChange({
+                    target: {
+                      name: "NuevoServicioPostEntrega",
+                      checked: !formDatos.NuevoServicioPostEntrega,
+                    },
+                  })
+                }
+                style={{ cursor: "pointer" }}
               >
                 <Form.Check
                   type="checkbox"
@@ -377,15 +384,17 @@ export const DefVariables = ({ onSendData, onSimulationResults, onSimulationErro
               </div>
             </Col>
             <Col md={4}>
-              <div 
-                className="checkbox-card" 
-                onClick={() => handleCheckboxChange({
-                  target: {
-                    name: "ClientesEmpresarialesPrioridad",
-                    checked: !formDatos.ClientesEmpresarialesPrioridad
-                  }
-                })}
-                style={{ cursor: 'pointer' }}
+              <div
+                className="checkbox-card"
+                onClick={() =>
+                  handleCheckboxChange({
+                    target: {
+                      name: "ClientesEmpresarialesPrioridad",
+                      checked: !formDatos.ClientesEmpresarialesPrioridad,
+                    },
+                  })
+                }
+                style={{ cursor: "pointer" }}
               >
                 <Form.Check
                   type="checkbox"

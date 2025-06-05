@@ -889,3 +889,26 @@ body {
     text-align: center;
   }
 }
+
+/* Estilos para la tabla */
+.sticky-header-table {
+  /* Asegúrate de que la tabla tenga suficiente espacio para el desplazamiento */
+  /* No es necesario un height fijo en la tabla misma, sino en un contenedor padre */
+}
+
+/* Estilos para el thead para hacerlo sticky */
+.sticky-header-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f3f4f6;
+}
+
+/* Ajuste para las filas de encabezado anidadas (Fila 2 y Fila 3) */
+.sticky-header-table thead tr:nth-child(2) th {
+  top: 40px;
+}
+
+.sticky-header-table thead tr:nth-child(3) th {
+  top: 95px;
+}
