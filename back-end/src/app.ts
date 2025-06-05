@@ -255,7 +255,7 @@ const server = serve({
           }
 
           // Ejecutar simulación
-          const resultado = simulacionCorreo(
+          const { resultados, vectorEstados } = simulacionCorreo(
             body.numeroIteraciones,
             body.iteracionAMostrarPrimero,
             body.cantidadDeFilasAMostrar,
@@ -270,8 +270,8 @@ const server = serve({
           const response = new Response(
             JSON.stringify({
               success: true,
-              resultados: resultado,
-              vectorEstados: resultado.vectorEstados || [],
+              resultados,
+              vectorEstados,
             }),
             {
               status: 200,
