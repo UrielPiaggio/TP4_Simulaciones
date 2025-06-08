@@ -338,6 +338,14 @@ export function simulacionCorreo(
   let ultimoRNDEmpresarial = 0
   let ultimoRNDPyES = 0
 
+  //Variables para RND de fin atencion
+  let ultimoRNDEnvioPaquetesF = 0
+  let ultimoRNDRyDF = 0
+  let ultimoRNDSySF = 0
+  let ultimoRNDEmpresarialF = 0
+  let ultimoRNDPyESF = 0
+  let ultimoRNDNuenoF = 0
+
   // Variables para tracking de próximas llegadas
   let proximaLlegadaEnvioPaquetes = 0
   let proximaLlegadaRyD = 0
@@ -345,6 +353,14 @@ export function simulacionCorreo(
   let proximaLlegadaEmpresarial = 0
   let proximaLlegadaPyES = 0
   let proximaLlegadaNuevoServicio = 0
+
+  //Variables para los fin de atencion
+  let proximaFAtenEnvioPaquetes = 0
+  let proximaFAtenRyD = 0
+  let proximaFAtenSyS = 0
+  let proximaFAtenEmpresarial = 0
+  let proximaFAtenPyES = 0
+  let proximaFAtenNuevoServicio = 0
 
   // Arrays para tracking de fin de atención por servidor
   const finAtencionEnvioPaquetes: number[] = new Array(
@@ -690,8 +706,13 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresEnvioPaquetes[servidorIndex] = "O"
+              ultimoRNDEnvioPaquetesF = random.float()
+              proximaFAtenEnvioPaquetes = exponencial(
+                tiempoAtencionEnvioPaquetes,
+                ultimoRNDEnvioPaquetesF
+              )
               finAtencionEnvioPaquetes[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionEnvioPaquetes
+                tiempoSimulacion + proximaFAtenEnvioPaquetes
             }
 
             // Cambio: 0.25 horas = 15 minutos
@@ -700,7 +721,7 @@ export function simulacionCorreo(
             }
             eventos.push({
               nombre: "Fin Atencion EnvioPaquetes",
-              horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
+              horario: tiempoSimulacion + proximaFAtenEnvioPaquetes,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -724,13 +745,14 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresRyD[servidorIndex] = "O"
-              finAtencionRyD[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionRyD
+              ultimoRNDRyDF = random.float()
+              proximaFAtenRyD = exponencial(tiempoAtencionRyD, ultimoRNDRyDF)
+              finAtencionRyD[servidorIndex] = tiempoSimulacion + proximaFAtenRyD
             }
 
             eventos.push({
               nombre: "Fin Atencion RyD",
-              horario: tiempoSimulacion + tiempoAtencionRyD,
+              horario: tiempoSimulacion + proximaFAtenRyD,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -753,12 +775,14 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresSyS[servidorIndex] = "O"
-              finAtencionSyS[servidorIndex] = tiempoSimulacion + tiempoVentaSyS
+              ultimoRNDSySF = random.float()
+              proximaFAtenSyS = exponencial(tiempoVentaSyS, ultimoRNDSySF)
+              finAtencionSyS[servidorIndex] = tiempoSimulacion + proximaFAtenSyS
             }
 
             eventos.push({
               nombre: "Fin Atencion SyS",
-              horario: tiempoSimulacion + tiempoVentaSyS,
+              horario: tiempoSimulacion + proximaFAtenSyS,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -785,13 +809,18 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresEmpresarial[servidorIndex] = "O"
+              ultimoRNDEmpresarialF = random.float()
+              proximaFAtenEmpresarial = exponencial(
+                tiempoAtencionEmpresarial,
+                ultimoRNDEmpresarialF
+              )
               finAtencionEmpresarial[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionEmpresarial
+                tiempoSimulacion + proximaFAtenEmpresarial
             }
 
             eventos.push({
               nombre: "Fin Atencion Empresarial",
-              horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+              horario: tiempoSimulacion + proximaFAtenEmpresarial,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -832,13 +861,15 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresPyES[servidorIndex] = "O"
+              ultimoRNDPyESF = random.float()
+              proximaFAtenPyES = exponencial(tiempoAtencionPyES, ultimoRNDPyESF)
               finAtencionPyES[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionPyES
+                tiempoSimulacion + proximaFAtenPyES
             }
 
             eventos.push({
               nombre: "Fin Atencion PyES",
-              horario: tiempoSimulacion + tiempoAtencionPyES,
+              horario: tiempoSimulacion + proximaFAtenPyES,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -862,13 +893,18 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresNuevoServicio[servidorIndex] = "O"
+              ultimoRNDNuenoF = random.float()
+              proximaFAtenNuevoServicio = exponencial(
+                nuevoServicio.tiempoAtencion,
+                ultimoRNDNuenoF
+              )
               finAtencionNuevoServicio[servidorIndex] =
-                tiempoSimulacion + nuevoServicio.tiempoAtencion
+                tiempoSimulacion + proximaFAtenNuevoServicio
             }
 
             eventos.push({
               nombre: "Fin Atencion Nuevo",
-              horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
+              horario: tiempoSimulacion + proximaFAtenNuevoServicio,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -909,8 +945,13 @@ export function simulacionCorreo(
             )
             if (nuevoServidorIndex !== -1) {
               estadoServidoresEnvioPaquetes[nuevoServidorIndex] = "O"
+              ultimoRNDEnvioPaquetesF = random.float()
+              proximaFAtenEnvioPaquetes = exponencial(
+                tiempoAtencionEnvioPaquetes,
+                ultimoRNDEnvioPaquetesF
+              )
               finAtencionEnvioPaquetes[nuevoServidorIndex] =
-                tiempoSimulacion + tiempoAtencionEnvioPaquetes
+                tiempoSimulacion + proximaFAtenEnvioPaquetes
             }
             tiempoEsperaEnvioPaquetes +=
               tiempoSimulacion - clienteEnCola.horario
@@ -922,7 +963,7 @@ export function simulacionCorreo(
 
             eventos.push({
               nombre: "Fin Atencion EnvioPaquetes",
-              horario: tiempoSimulacion + tiempoAtencionEnvioPaquetes,
+              horario: tiempoSimulacion + proximaFAtenEnvioPaquetes,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -955,13 +996,15 @@ export function simulacionCorreo(
             )
             if (nuevoServidorIndex !== -1) {
               estadoServidoresRyD[nuevoServidorIndex] = "O"
+              ultimoRNDRyDF = random.float()
+              proximaFAtenRyD = exponencial(tiempoAtencionRyD, ultimoRNDRyDF)
               finAtencionRyD[nuevoServidorIndex] =
-                tiempoSimulacion + tiempoAtencionRyD
+                tiempoSimulacion + proximaFAtenRyD
             }
             tiempoEsperaRyD += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion RyD",
-              horario: tiempoSimulacion + tiempoAtencionRyD,
+              horario: tiempoSimulacion + proximaFAtenRyD,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -986,13 +1029,15 @@ export function simulacionCorreo(
             )
             if (nuevoServidorIndex !== -1) {
               estadoServidoresSyS[nuevoServidorIndex] = "O"
+              ultimoRNDSySF = random.float()
+              proximaFAtenSyS = exponencial(tiempoVentaSyS, ultimoRNDSySF)
               finAtencionSyS[nuevoServidorIndex] =
-                tiempoSimulacion + tiempoVentaSyS
+                tiempoSimulacion + proximaFAtenSyS
             }
             tiempoEsperaSyS += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion SyS",
-              horario: tiempoSimulacion + tiempoVentaSyS,
+              horario: tiempoSimulacion + proximaFAtenSyS,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -1019,14 +1064,19 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresEmpresarial[servidorIndex] = "O"
+              ultimoRNDEmpresarialF = random.float()
+              proximaFAtenEmpresarial = exponencial(
+                tiempoAtencionEmpresarial,
+                ultimoRNDEmpresarialF
+              )
               finAtencionEmpresarial[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionEmpresarial
+                tiempoSimulacion + proximaFAtenEmpresarial
             }
             tiempoEsperaEmpresarialAltaPrioridad +=
               tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion Empresarial",
-              horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+              horario: tiempoSimulacion + proximaFAtenEmpresarial,
               horarioInicio: tiempoSimulacion,
             })
           } else {
@@ -1040,15 +1090,20 @@ export function simulacionCorreo(
               )
               if (servidorIndex !== -1) {
                 estadoServidoresEmpresarial[servidorIndex] = "O"
+                ultimoRNDEmpresarialF = random.float()
+                proximaFAtenEmpresarial = exponencial(
+                  tiempoAtencionEmpresarial,
+                  ultimoRNDEmpresarialF
+                )
                 finAtencionEmpresarial[servidorIndex] =
-                  tiempoSimulacion + tiempoAtencionEmpresarial
+                  tiempoSimulacion + proximaFAtenEmpresarial
               }
 
               tiempoEsperaEmpresarialBajaPrioridad +=
                 tiempoSimulacion - clienteEnCola.horario
               eventos.push({
                 nombre: "Fin Atencion Empresarial",
-                horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+                horario: tiempoSimulacion + proximaFAtenEmpresarial,
                 horarioInicio: tiempoSimulacion,
               })
             }
@@ -1075,14 +1130,16 @@ export function simulacionCorreo(
             )
             if (servidorIndex !== -1) {
               estadoServidoresPyES[servidorIndex] = "O"
+              ultimoRNDPyESF = random.float()
+              proximaFAtenPyES = exponencial(tiempoAtencionPyES, ultimoRNDPyESF)
               finAtencionPyES[servidorIndex] =
-                tiempoSimulacion + tiempoAtencionPyES
+                tiempoSimulacion + proximaFAtenPyES
             }
 
             tiempoEsperaPyES += tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion PyES",
-              horario: tiempoSimulacion + tiempoAtencionPyES,
+              horario: tiempoSimulacion + proximaFAtenPyES,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -1112,14 +1169,19 @@ export function simulacionCorreo(
             )
             if (nuevoServidorIndex !== -1) {
               estadoServidoresNuevoServicio[nuevoServidorIndex] = "O"
+              ultimoRNDNuenoF = random.float()
+              proximaFAtenNuevoServicio = exponencial(
+                nuevoServicio.tiempoAtencion,
+                ultimoRNDNuenoF
+              )
               finAtencionNuevoServicio[nuevoServidorIndex] =
-                tiempoSimulacion + nuevoServicio.tiempoAtencion
+                tiempoSimulacion + proximaFAtenNuevoServicio
             }
             tiempoEsperaNuevoServicio +=
               tiempoSimulacion - clienteEnCola.horario
             eventos.push({
               nombre: "Fin Atencion Nuevo",
-              horario: tiempoSimulacion + nuevoServicio.tiempoAtencion,
+              horario: tiempoSimulacion + proximaFAtenNuevoServicio,
               horarioInicio: tiempoSimulacion,
             })
           }
@@ -1147,7 +1209,7 @@ export function simulacionCorreo(
           tiempoSimulacion - clienteEnCola.horario
         eventos.push({
           nombre: "Fin Atencion Empresarial",
-          horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+          horario: tiempoSimulacion + proximaFAtenEmpresarial,
           horarioInicio: tiempoSimulacion,
         })
       } else if (colaEmpresarialBajaPrioridad.length > 0) {
@@ -1158,7 +1220,7 @@ export function simulacionCorreo(
           tiempoSimulacion - clienteEnCola.horario
         eventos.push({
           nombre: "Fin Atencion Empresarial",
-          horario: tiempoSimulacion + tiempoAtencionEmpresarial,
+          horario: tiempoSimulacion + proximaFAtenEmpresarial,
           horarioInicio: tiempoSimulacion,
         })
       }
